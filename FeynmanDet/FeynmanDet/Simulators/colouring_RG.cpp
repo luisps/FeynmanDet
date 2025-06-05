@@ -332,14 +332,14 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
         }
     }
 
-printf("FORWARD COLOURING (RG_map_fw):\n");
+/*printf("FORWARD COLOURING (RG_map_fw):\n");
 	for (int nq = 0; nq < NQ; nq++) {
 		printf("Qubit %d: ", nq);
 		for (int l = 0; l <= L; l++) {
 			printf("%d ", RG_map_fw[nq][l]);
 		}
 		printf("\n");
-	}
+	}*/
 
 
     // BS
@@ -504,14 +504,14 @@ printf("FORWARD COLOURING (RG_map_fw):\n");
         }
     }
 
-printf("BACKWARD COLOURING (RG_map_bw):\n");
+/*printf("BACKWARD COLOURING (RG_map_bw):\n");
 	for (int nq = 0; nq < NQ; nq++) {
 		printf("Qubit %d: ", nq);
 		for (int l = 0; l <= L; l++) {
 			printf("%d ", RG_map_bw[nq][l]);
 		}
 		printf("\n");
-	}           
+	}*/
          
 	//ver a cor e binary digit final
 	

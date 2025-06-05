@@ -67,7 +67,7 @@ int main(int argc, char *argv[]) {
     printf("N= %llu \n", N);
     
     //print_circuit(circuit);
-    StateT fs=1;
+    StateT fs=5;
     //for (fs=0 ; fs < N ; fs++) {
         clock_t start, end;
         start=clock();

@@ -24,7 +24,9 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
     float* wR=new float[L-1];
     float* wI=new float[L-1];
 
-
+    double const total_paths = pow(2.F, (double)(NQ*(L-1)));
+    printf ("%le existing paths\n", total_paths);
+    
     int init_state_arr[NQ];
     int final_state_arr[NQ];
     float sumR=0.f, sumI=0.f;
@@ -79,9 +81,14 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         
         }
             
-        sumR += pathR;
-        sumI += pathI;
+        if (!zero_weight_layer) {
+            sumR += pathR;
+            sumI += pathI;
+        }
         path_counter++;
+        if (!(path_counter & 0x00FFFFF)) {
+            fprintf(stderr, "\rpath_counter=%llu", path_counter);
+        }
         if (!zero_weight_layer) path_NZ_counter++;
         
         // compute next path
@@ -100,6 +107,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
     aR = sumR;
     aI = sumI;
 
+    printf ("\n");
     printf ("< %llu | U | %llu > = %.6f + i %.6f, p=%.6f\n", final_state, init_state, aR, aI, aR*aR+aI*aI);
-    printf ("%llu paths, %llu non zero\n", path_counter, path_NZ_counter);
+    printf ("%llu evaluated paths, %llu non zero\n", path_counter, path_NZ_counter);
 }
