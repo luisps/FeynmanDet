@@ -559,7 +559,7 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
 
 	for (int q = 0; q < NQ; q++) {
 		for (int l = 1; l < L; l++) {
-			final_states_output[q * (L - 1) + (l - 1)] = RG_map[q][l];
+			final_states_output[(l - 1)*NQ+q] = RG_map[q][l];
 		}
 	}
 	

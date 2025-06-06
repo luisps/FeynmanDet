@@ -10,7 +10,7 @@
 #include <time.h>
 #include <iostream>
 
-#include "simulator_RG.hpp"
+#include "simulator_PB.hpp"
 
 static void print_RG (int *states, int NQ, int L) {
     fprintf (stderr, "Colouring: \n");
@@ -40,7 +40,7 @@ static void print_RG (int *states, int NQ, int L) {
     fprintf (stderr, "\n");
 }
 
-void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
+void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
 
     const int L = circuit->size->num_layers;
     StateT *ndxs = new StateT[L-1];

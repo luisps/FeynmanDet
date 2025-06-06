@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "BaseFunctionalty/circuit.h"
 #include "Simulators/simulator_RG.hpp"
+#include "Simulators/simulator_PB.hpp"
 #include "Simulators/simulator_all.hpp"
 #include <time.h>
 #include "States.h"
@@ -16,7 +17,7 @@
 int main(int argc, char *argv[]) {
 
     char fileName[256];
-    int algorithm = 1;
+    int algorithm = 1, fs_int=0;
 
     if (argc>=2) { // get circuit name
         snprintf (fileName, 255, "circuits/%s", argv[1]);
@@ -24,11 +25,16 @@ int main(int argc, char *argv[]) {
     else {
         snprintf (fileName, 255, "circuits/circuit_19.data");
     }
+    // get final state (integer)
+    if (argc>=3) {
+        fs_int = atoi(argv[2]);
+    }
     // get algorithm
     // 0 - all paths
     // 1 - RG paths
-    if (argc>=3) {
-        algorithm = atoi(argv[2]);
+    // 2 - PB paths
+    if (argc>=4) {
+        algorithm = atoi(argv[3]);
     }
     
     fprintf (stdout, "Circuit: %s\n", fileName);
@@ -38,6 +44,9 @@ int main(int argc, char *argv[]) {
             break;
         case 1:
             fprintf (stdout, "RG_PATHS\n");
+            break;
+        case 2:
+            fprintf (stdout, "PB_PATHS\n");
             break;
 
         default:
@@ -67,14 +76,13 @@ int main(int argc, char *argv[]) {
     printf("N= %llu \n", N);
     
     //print_circuit(circuit);
-    StateT fs=5;
     //for (fs=0 ; fs < N ; fs++) {
         clock_t start, end;
         start=clock();
 
 
         StateT init_state = 0;
-        StateT final_state= fs;
+    StateT final_state= (StateT) fs_int;
         float aR=0;
         float aI=0;
         
@@ -85,7 +93,10 @@ int main(int argc, char *argv[]) {
             case 1:
                 simulate_RG_paths(circuit, init_state, final_state, aR, aI);
                 break;
-                
+            case 2:
+                simulate_PB_paths(circuit, init_state, final_state, aR, aI);
+                break;
+
             default:
                 break;
         }
