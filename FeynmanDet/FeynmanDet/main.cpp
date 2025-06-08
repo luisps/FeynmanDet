@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     }
     
 #if defined(_OPENMP)
-    fprintf(stderr, "OpenMP enabled: % cores.\n", omp_get_num_procs());
+    fprintf(stderr, "OpenMP enabled: %d cores.\n", omp_get_num_procs());
 #endif
     
     fprintf (stdout, "Circuit: %s\n", fileName);
