@@ -14,6 +14,10 @@
 #include <time.h>
 #include "States.h"
 
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
+
 int main(int argc, char *argv[]) {
 
     char fileName[256];
@@ -36,6 +40,10 @@ int main(int argc, char *argv[]) {
     if (argc>=4) {
         algorithm = atoi(argv[3]);
     }
+    
+#if defined(_OPENMP)
+    fprintf(stderr, "OpenMP enabled: % cores.\n", omp)
+#endif
     
     fprintf (stdout, "Circuit: %s\n", fileName);
     switch (algorithm) {

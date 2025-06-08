@@ -12,6 +12,9 @@
 
 #include "simulator_all.hpp"
 
+#if defined(_OPENMP)
+#include <omp.h>
+#endif
 
 void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
 
