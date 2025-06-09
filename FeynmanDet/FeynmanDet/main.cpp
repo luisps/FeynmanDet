@@ -18,6 +18,8 @@
 #include <omp.h>
 #endif
 
+int n_threads=-1;
+
 int main(int argc, char *argv[]) {
 
     char fileName[256];
@@ -40,7 +42,11 @@ int main(int argc, char *argv[]) {
     if (argc>=4) {
         algorithm = atoi(argv[3]);
     }
-    
+    // get num threads (OpenMP)
+    if (argc>=5) {
+        n_threads = atoi(argv[4]);
+    }
+
 #if defined(_OPENMP)
     fprintf(stderr, "OpenMP enabled: %d cores.\n", omp_get_num_procs());
 #endif
