@@ -14,7 +14,7 @@
 
 #if defined(_OPENMP)
 #include <omp.h>
-extern static int n_threads;
+extern int n_threads;
 #endif
 
 void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
