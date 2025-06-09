@@ -41,7 +41,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_OPENMP)
     if (n_threads==-1) {
         int const n_cores = omp_get_num_procs();
-        n_threads = (N>n_cores ? n_cores : n_threads);
+        n_threads = (N>n_cores ? n_cores : N);
     }
     fprintf (stdout, "OpenMP: %d threads\n", n_threads);
 #pragma omp parallel num_threads(n_threads)
