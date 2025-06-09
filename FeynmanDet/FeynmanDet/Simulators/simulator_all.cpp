@@ -151,6 +151,9 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #pragma omp atomic
 #endif
         path_NZ_counter += path_NZ_counterL;
+#if defined(_OPENMP)
+        printf ("Thread %d: %llu evaluated paths, %llu non zero\n", path_counterL, path_NZ_counterL);
+#endif
     } // end omp parallel
 
     printf ("\n");
