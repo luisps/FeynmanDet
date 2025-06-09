@@ -107,11 +107,15 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 }
                 path_counterL++;
                 /*if (!(path_counter & 0x00FFFFF)) {
-                    fprintf(stderr, "\rpath_counter=%llu", path_counter);
-                }*/
+                 fprintf(stderr, "\rpath_counter=%llu", path_counter);
+                 }*/
                 if (!zero_weight_layer) path_NZ_counterL++;
                 
                 // compute next path
+                // if l==0 (0 amplitude in the first layer)
+                // break off from the while loop
+                // (to iterate over ndxs0)
+                if (l==0) break;
                 // updating ndxs[1..L-2]
                 int ll;
                 for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>0 ; ll--) {
