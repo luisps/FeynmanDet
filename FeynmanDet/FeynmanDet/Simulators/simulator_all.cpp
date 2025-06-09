@@ -27,12 +27,12 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
     double const total_paths = pow(2.F, (double)(NQ*(L-1)));
     printf ("%le existing paths\n", total_paths);
     
-    int init_state_arr[NQ];
+    /*int init_state_arr[NQ];
     int final_state_arr[NQ];
     for (int i=0; i<NQ; i++){
         init_state_arr[i]=qb_value(i,init_state);
         final_state_arr[i]=qb_value(i,final_state);	
-    }
+    }*/
     aR = aI = 0.f;
 
     // Simulation starts
@@ -152,7 +152,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #endif
         path_NZ_counter += path_NZ_counterL;
 #if defined(_OPENMP)
-        printf ("Thread %d: %llu evaluated paths, %llu non zero\n", path_counterL, path_NZ_counterL);
+        printf ("Thread %d: %llu evaluated paths, %llu non zero\n", omp_get_thread_num(), path_counterL, path_NZ_counterL);
 #endif
     } // end omp parallel
 
