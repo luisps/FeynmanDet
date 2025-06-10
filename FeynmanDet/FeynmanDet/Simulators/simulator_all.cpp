@@ -52,6 +52,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         StateT ndxs0;
         float sumR=0.f, sumI=0.f;
 #if defined(_OPENMP)
+        clock_t T_totaltime=0.;
 #pragma omp for schedule(dynamic)
 #endif
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
@@ -156,6 +157,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
             end=clock();
             double time_taken=double(end - start)/double(CLOCKS_PER_SEC);
             fprintf (stdout, "thread %d with ndxs0=%llu took %lf secs\n", omp_get_thread_num(), ndxs0, time_taken);
+            T_totaltime += time_taken;
 #endif
 
         }  // main simulation loop (ndxs0 and omp for)
@@ -176,7 +178,8 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #endif
         path_NZ_counter += path_NZ_counterL;
 #if defined(_OPENMP)
-        printf ("Thread %d: %llu evaluated paths, %llu non zero\n", omp_get_thread_num(), path_counterL, path_NZ_counterL);
+        printf ("Thread %d: %llu evaluated paths, %llu non zero (%lf secs)\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, T_totaltime);
+
 #endif
     } // end omp parallel
 
