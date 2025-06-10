@@ -70,7 +70,6 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
             ndxs[0] = ndxs0;
             for (int i=1 ; i<L-1 ; i++) ndxs[i]=0 ;
             
-            int start_layer=0;
             float wR[L-1], wI[L-1];
             
             // early termination if the amplitude
@@ -86,6 +85,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
             }
             wR[0]=pathR;
             wI[0]=pathI;
+            int start_layer=1;
 
             while (ndxs[1] < N) {
                 
