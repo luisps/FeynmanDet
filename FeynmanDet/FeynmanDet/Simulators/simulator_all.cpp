@@ -56,7 +56,8 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #endif
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
 #if defined(_OPENMP)
-            fprintf (stdout, "thread %d with ndxs0=%llu\n", omp_get_thread_num(), ndxs0);
+            clock_t start, end;
+            start=clock();
 #endif
             // all intermediate layers indexes to 0
             // except intermediate layer 0
@@ -137,6 +138,12 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                         break;
                 }
             } // main simulation loop (while)
+#if defined(_OPENMP)
+            end=clock();
+            double time_taken=double(end - start)/double(CLOCKS_PER_SEC);
+            fprintf (stdout, "thread %d with ndxs0=%llu took lf secs\n", omp_get_thread_num(), ndxs0, time_taken);
+#endif
+
         }  // main simulation loop (ndxs0 and omp for)
 #if defined(_OPENMP)
 #pragma omp atomic
