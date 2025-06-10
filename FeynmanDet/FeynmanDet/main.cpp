@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     int algorithm = 1, fs_int=0;
 
     if (argc>=2) { // get circuit name
-        snprintf (fileName, 255, "circuits/%s", argv[1]);
+        snprintf (fileName, 255, "circuits/circuit_%s.data", argv[1]);
     }
     else {
         snprintf (fileName, 255, "circuits/circuit_19.data");
