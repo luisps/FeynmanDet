@@ -73,6 +73,20 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
             int start_layer=0;
             float wR[L-1], wI[L-1];
             
+            // early termination if the amplitude
+            // from init_state to ndxs[0] is zero
+            float pathR = 1.f;
+            float pathI = 0.f;
+            TCircuitLayer *layer = &circuit->layers[0];
+            layer_w(layer, 0, init_state, ndxs0, pathR, pathI);
+            
+            
+            if (complex_abs_square(pathR, pathI) <= 0.f) {
+                continue;
+            }
+            wR[0]=pathR;
+            wI[0]=pathI;
+
             while (ndxs[1] < N) {
                 
                 /*
@@ -82,8 +96,8 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                  fprintf (stderr, "%llu ", ndxs[lll]);
                  fprintf (stderr, "\n");*/
                 
-                float pathR = (start_layer==0? 1.f : wR[start_layer-1]);
-                float pathI = (start_layer==0? 0.f : wI[start_layer-1]);
+                pathR = (start_layer==0? 1.f : wR[start_layer-1]);
+                pathI = (start_layer==0? 0.f : wI[start_layer-1]);
                 StateT current_state = (start_layer==0? init_state : ndxs[start_layer-1]);
                 
                 int l;
@@ -96,7 +110,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                     float lI=0.f;
                     next_state = (l< L-1 ? ndxs[l] : final_state);
                     
-                    TCircuitLayer *layer = &circuit->layers[l];
+                    layer = &circuit->layers[l];
                     layer_w(layer, l, current_state, next_state, lR, lI);
                     complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
                     
