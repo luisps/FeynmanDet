@@ -55,6 +55,9 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #pragma omp for schedule(dynamic)
 #endif
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
+#if defined(_OPENMP)
+            fprintf (stdout, "thread %d with ndxs0=%llu\n", omp_get_thread_num(), ndxs0);
+#endif
             // all intermediate layers indexes to 0
             // except intermediate layer 0
             // this one iterates as a for loop, to facilitate OpenMP
