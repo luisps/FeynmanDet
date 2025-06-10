@@ -52,7 +52,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         StateT ndxs0;
         float sumR=0.f, sumI=0.f;
 #if defined(_OPENMP)
-        clock_t T_totaltime=0.;
+        double T_totaltime=0.;
 #pragma omp for schedule(dynamic)
 #endif
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
