@@ -44,7 +44,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         n_threads = (N>n_cores ? n_cores : N);
     }
     fprintf (stdout, "OpenMP: %d threads\n", n_threads);
-#pragma omp parallel num_threads(n_threads)
+#pragma omp parallel num_threads(n_threads) proc_bind(spread)
 #endif
     {
         StateT path_counterL=0, path_NZ_counterL=0;
@@ -53,7 +53,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         float sumR=0.f, sumI=0.f;
 #if defined(_OPENMP)
         double T_totaltime=0.;
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic,1)
 #endif
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
 #if defined(_OPENMP)
