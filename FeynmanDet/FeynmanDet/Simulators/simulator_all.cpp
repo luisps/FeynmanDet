@@ -141,7 +141,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_OPENMP)
             end=clock();
             double time_taken=double(end - start)/double(CLOCKS_PER_SEC);
-            fprintf (stdout, "thread %d with ndxs0=%llu took lf secs\n", omp_get_thread_num(), ndxs0, time_taken);
+            fprintf (stdout, "thread %d with ndxs0=%llu took %lf secs\n", omp_get_thread_num(), ndxs0, time_taken);
 #endif
 
         }  // main simulation loop (ndxs0 and omp for)
