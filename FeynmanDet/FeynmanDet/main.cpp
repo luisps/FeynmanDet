@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
         
         end=clock();
         double time_taken=double(end - start)/double(CLOCKS_PER_SEC);
-        printf("Time taken is: %lf \n", time_taken);
+        printf("Time taken is: %lf secs\n", time_taken);
     //}
     // Free the allocated memory
     free(circuit->size);

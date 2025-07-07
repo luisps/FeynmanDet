@@ -8,6 +8,8 @@
 #include "../States.h"
 #include "../BaseFunctionalty/circuit.h"
 
+#include "colouring_PB.hpp"
+
 void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI);
 
 #endif

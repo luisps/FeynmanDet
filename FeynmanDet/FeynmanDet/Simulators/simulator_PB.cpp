@@ -6,31 +6,41 @@
 #include <algorithm>
 #include "my_complex.h"
 #include "layer.hpp"
-#include "colouring_RG.hpp"
 #include <time.h>
 #include <iostream>
 
+#include "colouring_RG.hpp"
+
 #include "simulator_PB.hpp"
 
-static void print_RG (int *states, int NQ, int L) {
+static void print_PB (colourT *states, int NQ, int L) {
     fprintf (stderr, "Colouring: \n");
     for (int q = 0; q < NQ; q++) {
         fprintf (stderr, "qb%d: ", q);
         for (int l = 1; l < L; l++) {
-            int colour= states[q + (l - 1)*NQ];
+            colourT colour= states[q + (l - 1)*NQ];
             char s[5];
             switch (colour) {
-                case -1:
+                case INVALID:
                     snprintf (s,4,"I");
                     break;
-                case 0:
+                case GREEN0:
                     snprintf (s,4,"G0");
                     break;
-                case 1:
+                case GREEN1:
                     snprintf (s,4,"G1");
                     break;
-                case 2:
+                case RED:
                     snprintf (s,4,"R");
+                    break;
+                case PINK:
+                    snprintf (s,4,"P");
+                    break;
+                case BLUE:
+                    snprintf (s,4,"B");
+                    break;
+                default:
+                    snprintf (s,4,"ERR");
                     break;
             }
             fprintf (stderr, "%s\t", s);
@@ -38,6 +48,188 @@ static void print_RG (int *states, int NQ, int L) {
         fprintf (stderr, "\n");
     }
     fprintf (stderr, "\n");
+}
+
+static int gate_output_1(int qbv, int name){
+    int out=0;
+    
+    switch (name){
+        case 0:
+        case 4:
+        case 5:
+        case 6:
+        case 13:
+        { //id
+            if(qbv==1){
+                out=1;
+            }
+            break;
+        }
+            
+        case 2:
+        case 3:
+        { //X //Y
+            if(qbv==0){
+                out=1;
+            }
+            break;
+        }
+        default:
+            fprintf (stderr, "gate_output error: unknown or branching gate found!\n");
+            break;
+    } // switch
+    return out;
+}
+
+
+// pega no input estado inicial e gate -> d� o estado final (para ver se � 1 ou 0)
+// gates 2 qubits
+// G2P0 - 2 qubits, no parameters
+// 'id2'  - 20    Used for errors
+// 'cx'  - 21 B
+// 'cz'  - 22
+// G2P1 - 2 qubits, 1 parameter
+// 'cp'  - 31
+
+static void gate_output_2(int qbv_c, int qbv_t, int name, int* out){
+    
+    out[0]=0;
+    out[1]=0;
+    switch (name){
+        case 20:
+        case 22:
+        case 31: {
+            out[0]=qbv_c;
+            out[1]=qbv_t;
+            break;
+        }
+            
+        case 21: { //CX
+            if(qbv_c==1){
+                out[0]=1;
+                if(qbv_t==0){
+                    out[1]=1;
+                }
+            } else {
+                if(qbv_t==1){
+                    out[1]=1;
+                }
+            }
+            
+            break;
+        }
+    }
+}
+
+
+static int qbv_given_previous_gate (TCircuit *circuit, int l, int n_qb, StateT previous_state) {
+    int qbv;
+        
+    TCircuitLayer* layer = &circuit->layers[l];
+    // Iterate over the gate types for each layer
+    for (int GT = 0; GT < 4; GT++) {
+        void* gates_ptr = layer->gates[GT];
+        int num_gates = layer->num_type_gates[GT];
+        switch (GT) {
+            case 0: {
+                TGate1P0* g1p0_ptr = (TGate1P0*)gates_ptr;
+                for (int g = 0; g < num_gates; g++, g1p0_ptr++) {
+                    int qubit = g1p0_ptr->qubit; //qubit que participa na gate
+                    if (qubit==n_qb) {
+                        int name = g1p0_ptr->name;
+                        int prev_qbv = qb_value(n_qb, previous_state);
+                        qbv = gate_output_1(prev_qbv, name);
+                        return qbv;
+                    }
+                }
+                break;
+            }
+            case 1: {
+                TGate1P1* g1p1_ptr = (TGate1P1*)gates_ptr;
+                for (int g = 0; g < num_gates; g++, g1p1_ptr++) {
+                    int qubit = g1p1_ptr->fdata.qubit; //qubit que participa na gate
+                    if (qubit==n_qb) {
+                        int name = g1p1_ptr->fdata.name;
+                        int prev_qbv = qb_value(n_qb, previous_state);
+                        qbv = gate_output_1(prev_qbv, name);
+                        printf ("gate name: %d ; input=%d; out=%d;\n",name, prev_qbv,qbv);
+                       return qbv;
+                    }
+                }
+                break;
+            }
+            case 2: {
+                TGate2P0* g2p0_ptr = (TGate2P0*)gates_ptr;
+                for (int g = 0; g < num_gates; g++, g2p0_ptr++) {
+                    int c_qubit = g2p0_ptr->c_qubit;
+                    int t_qubit = g2p0_ptr->t_qubit;
+                    if (c_qubit==n_qb) {
+                        //printf ("previous_state: %llu ; c_ndx: %d ; t_ndx: %d\n",previous_state, c_qubit, t_qubit);
+                        int name = g2p0_ptr->name;
+                        int prev_qbv_c = qb_value(c_qubit, previous_state);
+                        int prev_qbv_t = qb_value(t_qubit, previous_state);
+                        int out[2];
+                        gate_output_2(prev_qbv_c, prev_qbv_t, name, out);
+                        qbv = out[0];
+                        //printf ("gate name: %d ; input: c=%d, t=%d; out: c=%d, t=%d;\n",name, prev_qbv_c,prev_qbv_t,out[0],out[1]);
+                        return qbv;
+                    }
+                    if (t_qubit==n_qb) {
+                        int name = g2p0_ptr->name;
+                        int prev_qbv_c = qb_value(c_qubit, previous_state);
+                        int prev_qbv_t = qb_value(t_qubit, previous_state);
+                        int out[2];
+                        gate_output_2(prev_qbv_c, prev_qbv_t, name, out);
+                        qbv = out[1];
+                        return qbv;
+                    }
+                }
+                break;
+            }
+            case 3: {
+                TGate2P1* g2p1_ptr = (TGate2P1*)gates_ptr;
+                for (int g = 0; g < num_gates; g++, g2p1_ptr++) {
+                    int c_qubit = g2p1_ptr->fdata.c_qubit; //qubit que participa na gate
+                    int t_qubit = g2p1_ptr->fdata.t_qubit;
+                    if (c_qubit==n_qb) {
+                        int name = g2p1_ptr->fdata.name;
+                        int prev_qbv_c = qb_value(c_qubit, previous_state);
+                        int prev_qbv_t = qb_value(t_qubit, previous_state);
+                        int out[2];
+                        gate_output_2(prev_qbv_c, prev_qbv_t, name, out);
+                        qbv = out[0];
+                        return qbv;
+                    }
+                    if (t_qubit==n_qb) {
+                        int name = g2p1_ptr->fdata.name;
+                        int prev_qbv_c = qb_value(c_qubit, previous_state);
+                        int prev_qbv_t = qb_value(t_qubit, previous_state);
+                        int out[2];
+                        gate_output_2(prev_qbv_c, prev_qbv_t, name, out);
+                        qbv = out[1];
+                        return qbv;
+                    }
+                }
+                break;
+            }
+        } // switch
+    } // for GT
+    return 0;
+}
+
+void printBits(size_t const size, void const * const ptr)
+{
+    unsigned char *b = (unsigned char*) ptr;
+    unsigned char byte;
+    int i, j;
+    
+    for (i = size-1; i >= 0; i--) {
+        for (j = 7; j >= 0; j--) {
+            byte = (b[i] >> j) & 1;
+            printf("%u", byte);
+        }
+    }
+    puts("");
 }
 
 void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
@@ -51,6 +243,11 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
     float* wR=new float[L-1];
     float* wI=new float[L-1];
 
+    /*for (StateT ant=0 ; ant <7 ; ant++) {
+        int blue_qbv = qbv_given_previous_gate (circuit, 1, 0, ant);
+        fprintf (stderr, "input=%d ; output=%d\n", qb_value(0, ant), blue_qbv);
+    }
+    return;*/
 
     int init_state_arr[NQ];
     int final_state_arr[NQ];
@@ -67,16 +264,13 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
     // -1 -> forward green != backward green : impossible
 
     // to store the colouring results
-    int* colours;
+    colourT* colours;
     colours=fs_bs_RG(circuit, init_state_arr, final_state_arr);
-
-    print_RG (colours, NQ, L);
-    int start_layer=0;
 
     // verify if there is a -1 in the colouring
     // if yes, amplitude = 0 + 0j
     for(int s=0; s<(L-1)*NQ; s++){
-        if(colours[s]==-1){
+        if(colours[s]==INVALID){
             aR=0.f;
             aI=0.f;
             printf ("EARLY TERMINATION: < %llu | U | %llu > = %.6f + i %.6f\n", (unsigned long long)final_state,
@@ -84,6 +278,11 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             return;
         }
     }
+
+    fs_PB(circuit, colours);
+    
+    print_PB (colours, NQ, L);
+    int start_layer=0;
 
     // Simulation starts
 
@@ -153,6 +352,12 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             sumR += pathR;
             sumI += pathI;
             path_NZ_counter++;
+            // DEBUG
+            printf ("Non zero path: ");
+            for (int lll=0 ; lll<L-1 ; lll++) {
+                printf ("%llu ", ndxs[lll]);
+            }
+            printf ("= %e + i %e\n", pathR, pathI);
         }
         path_counter++;
 
@@ -168,7 +373,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             else
                 break;
         }*/
-        int ll;
+        /*int ll;
         bool carry = true;
         for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
             is_zero = true;
@@ -182,18 +387,82 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                 }
                 // verify whether this ndxs complies with the colouring
                 is_zero = false;
-                for (int i=0; i<NQ; i++){
+                for (int i=0; i<NQ && !is_zero; i++){
                     
                     int const next_state_CL = colours[i+ll*NQ];
-                    if (next_state_CL==2) continue;
-                    
-                    if (next_state_CL != qb_value(i,ndxs[ll])) {
+                    //if (next_state_CL==PINK) continue;
+                    if (next_state_CL==BLUE) {
+                        int blue_qbv = qbv_given_previous_gate(circuit, ll, i, (ll==0 ? init_state : ndxs[ll-1]));
+                        int qbv = qb_value(i, ndxs[ll]);
+                        if (qbv != blue_qbv) {
+                            printf ("BLUE would reject path ");
+                            for (int lll=0 ; lll<L-1 ; lll++) {
+                                printf ("%llu ", ndxs[lll]);
+                            }
+                            printf ("in layer %d, qubit %d\n", ll, i);
+                            is_zero = true;
+                        }
+                        //continue;
+                    }
+                    if ((next_state_CL==GREEN0 || next_state_CL==GREEN1) && next_state_CL != qb_value(i,ndxs[ll])) {
                         is_zero=true;
-                        break;
+                    }
+                } // for (qubits)
+            }  // while (is_zero)
+        }*/
+
+        int ll;
+        bool carry = true;
+        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
+            is_zero = true;
+            carry = false;
+            while (is_zero) {
+                ndxs[ll]++;
+                start_layer=ll;
+                if (ndxs[ll]==N && ll>0)  {
+                    ndxs[ll] = 0;
+                    carry = true;
+                }
+                else if (ndxs[ll]==N && ll==0)  {
+                    break;
+                }
+                printf ("Evaluating path ");
+                for (int lll=0 ; lll<L-1 ; lll++) {
+                    printf ("%llu ", ndxs[lll]);
+                }
+                printf ("(carry=%s)\n", (carry?"TRUE":"FALSE"));
+                // verify whether this ndxs complies with the colouring
+                is_zero = false;
+                for (int i=0; i<NQ && !is_zero ; i++){
+                    
+                    int const next_state_CL = colours[i+ll*NQ];
+                    
+                    if (next_state_CL== BLUE) {
+                        int blue_qbv = qbv_given_previous_gate(circuit, ll, i, (ll>0 ? ndxs[ll-1] : init_state));
+                        int qbv = qb_value(i,ndxs[ll]);
+                        if (qbv != blue_qbv) {
+                            printf ("BLUE rejects path ");
+                            for (int lll=0 ; lll<L-1 ; lll++) {
+                                printf ("%llu ", ndxs[lll]);
+                            }
+                            printf ("in layer %d, qubit %d\n", ll, i);
+                            printf ("blue_qbv= %d, qbv %d\n", blue_qbv, qbv);
+                            is_zero = true;
+                        }
+                    }
+                    if (next_state_CL== GREEN0 ||next_state_CL== GREEN1) {
+                        if (next_state_CL != qb_value(i,ndxs[ll])) {
+                            printf ("GREEN rejects path ");
+                            for (int lll=0 ; lll<L-1 ; lll++) {
+                                printf ("%llu ", ndxs[lll]);
+                            }
+                            printf ("in layer %d, qubit %d\n", ll, i);
+                            is_zero=true;
+                        }
                     }
                 }
-            }
-        }
+            } // while (is_zero)
+        }  // for backward change layers ndxs
 
     } // main simulation loop (while)
     aR = sumR;

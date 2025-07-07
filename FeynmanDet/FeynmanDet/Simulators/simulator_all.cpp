@@ -129,6 +129,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 if (!zero_weight_layer) {
                     sumR += pathR;
                     sumI += pathI;
+                    
                 }
                 path_counterL++;
                 /*if (!(path_counter & 0x00FFFFF)) {

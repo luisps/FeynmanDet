@@ -24,11 +24,11 @@
 // 'ry'  - 12 B
 // 'rz'  - 13
 // 'p'  - 14
-static int gate_output_1(int init_state, int name){
-	int out=0;
+static colourT gate_output_1(colourT init_state, int name){
+    colourT out=GREEN0;
 	
-    if (init_state==2) {
-        out=2;
+    if (init_state==RED) {
+        out=RED;
     }
     else {
         switch (name){
@@ -38,8 +38,8 @@ static int gate_output_1(int init_state, int name){
             case 6:
             case 13:
             { //id
-                if(init_state==1){
-                    out=1;
+                if(init_state==GREEN1){
+                    out=GREEN1;
                 }
                 break;
             }
@@ -47,8 +47,8 @@ static int gate_output_1(int init_state, int name){
             case 2:
             case 3:
             { //X //Y
-                if(init_state==0){
-                    out=1;
+                if(init_state==GREEN0){
+                    out=GREEN1;
                 }
                 break;
             }
@@ -58,7 +58,7 @@ static int gate_output_1(int init_state, int name){
             case 12:
                 //case 13:
             {
-                out=2;
+                out=RED;
                 break;
             }
         }
@@ -77,10 +77,10 @@ static int gate_output_1(int init_state, int name){
 // G2P1 - 2 qubits, 1 parameter
 // 'cp'  - 31
 
-static void gate_output_2(int* init_state, int name, int* out){
+static void gate_output_2(colourT* init_state, int name, colourT* out){
 	
-	out[0]=0;
-	out[1]=0;
+	out[0]=GREEN0;
+	out[1]=GREEN0;
     switch (name){
         case 20:
         case 22:
@@ -92,21 +92,21 @@ static void gate_output_2(int* init_state, int name, int* out){
             
         case 21: { //CX
             
-            if (init_state[0]==2) { // ctrl ==2, trgt don't care
-                out[0]=out[1]=2;
+            if (init_state[0]==RED) { // ctrl ==2, trgt don't care
+                out[0]=out[1]=RED;
             }
-            else if (init_state[1]==2) { // trgt ==2, ctrl !=2
+            else if (init_state[1]==RED) { // trgt ==2, ctrl !=2
                 out[0]=init_state[0];
-                out[1]=2;
+                out[1]=RED;
             }
-            else if(init_state[0]==1){
-                out[0]=1;
-                if(init_state[1]==0){
-                    out[1]=1;
+            else if(init_state[0]==GREEN1){
+                out[0]=GREEN1;
+                if(init_state[1]==GREEN0){
+                    out[1]=GREEN1;
                 }
             } else{
-                if(init_state[1]==1){
-                    out[1]=1;
+                if(init_state[1]==GREEN1){
+                    out[1]=GREEN1;
                 }
             }
             
@@ -116,7 +116,7 @@ static void gate_output_2(int* init_state, int name, int* out){
 }
 
 
-int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
+colourT* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
 	
 //Layers e qubits    
     const int L = circuit->size->num_layers;
@@ -124,29 +124,29 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
     
 //Colours
 	//RED==2;
-	//GREEN_N0==0;
-	//GREEN_N1==1;
+	//GREEN0==0;
+	//GREEN1==1;
 	//Erro=-1 
     
 //map with colouring for each qubit at each intermediate state
-    char RG_map_fw[NQ][L+1];
-	char RG_map_bw[NQ][L+1];
-	char RG_map[NQ][L+1];
+    colourT RG_map_fw[NQ][L+1];
+    colourT RG_map_bw[NQ][L+1];
+    colourT RG_map[NQ][L+1];
 
 // set all RG_map to RED
 	for (int l = 0; l < L + 1; l++) {
 		for (int nq = 0; nq < NQ; nq++) {
-			RG_map_fw[nq][l] = 2;
-			RG_map_bw[nq][l] = 2;
-			RG_map[nq][l] = 2;
+            RG_map_fw[nq][l] = RED;
+            RG_map_bw[nq][l] = RED;
+            RG_map[nq][l] = RED;
 		}
 	}
 
 
 // set qubits in columns 0 and L according to initial and final_state
 	for (int nq=0; nq<NQ;nq++){
-        RG_map_fw[nq][0] = init_state_arr[nq];
-        RG_map_bw[nq][L] = final_state_arr[nq];
+        RG_map_fw[nq][0] = (colourT)init_state_arr[nq];
+        RG_map_bw[nq][L] = (colourT)final_state_arr[nq];
 	}
 
 
@@ -170,15 +170,15 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                     for (int g = 0; g < num_gates; g++, g1p0_ptr++) {
                         int name = g1p0_ptr->name;
                         int qubit = g1p0_ptr->qubit; //qubit que participa na gate
-                        int input_RG;
-                        int output_RG;
+                        colourT input_RG;
+                        colourT output_RG;
                         
                         //get colors from RG_map_fw
                         //ver numero que esta no mapa para este qubit nesta layer: 0,1 ou 2
                         input_RG=RG_map_fw[qubit][l];
                         
                         //se for vermelho, sai
-                        if (input_RG==2) {
+                        if (input_RG==RED) {
                             continue;
                         }
                         
@@ -189,7 +189,7 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         RG_map_fw[qubit][l+1]=output_RG;
                         
                         for (int nq=0; nq<NQ;nq++){
-                            if(RG_map_fw[nq][l+1]==2){
+                            if(RG_map_fw[nq][l+1]==RED){
                                 continue;
                             }
                         }
@@ -203,14 +203,14 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                     for (int g = 0; g < num_gates; g++, g1p1_ptr++) {
                         int name = g1p1_ptr->fdata.name;
                         int qubit = g1p1_ptr->fdata.qubit;
-                        int input_RG;
-                        int output_RG;
+                        colourT input_RG;
+                        colourT output_RG;
                         //get colors from RG_map_fw
                         //ver n�mero que est� no mapa para este qubit nesta layer: 0,1 ou 2
                         input_RG=RG_map_fw[qubit][l];
                         
                         //se for vermelho, sai
-                        if (input_RG==2) {
+                        if (input_RG==RED) {
                             continue;
                         }
                         
@@ -222,7 +222,7 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         
                         
                         for (int nq=0; nq<NQ;nq++){
-                            if(RG_map_fw[nq][l+1]==2){
+                            if(RG_map_fw[nq][l+1]==RED){
                                 continue;;
                             }
                         }
@@ -239,9 +239,9 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         int t_qubit = g2p0_ptr->t_qubit;
                         
                         
-                        int input_RG[2];
-                        int input_RG_c;
-                        int input_RG_t;
+                        colourT input_RG[2];
+                        colourT input_RG_c;
+                        colourT input_RG_t;
                         input_RG_c=RG_map_fw[c_qubit][l];
                         input_RG_t=RG_map_fw[t_qubit][l];
                         input_RG[0] = input_RG_c;
@@ -249,19 +249,19 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         
                         
                         //se for vermelho, sai
-                        if (input_RG_c==2 && input_RG_t==2) {
+                        if (input_RG_c==RED && input_RG_t==RED) {
                             continue;
                         }
                         
                         //compute output colour for this gate
-                        int output[2];
+                        colourT output[2];
                         gate_output_2(input_RG, name, output);
                         // set colors in RG_map_fw
                         RG_map_fw[c_qubit][l+1] = output[0];
                         // Para cada qubit
-                        if (RG_map_fw[t_qubit][l] == 2) {
+                        if (RG_map_fw[t_qubit][l] == RED) {
                             // O qubit está num estado de superposição (2), então, não altere para 0 ou 1 sem verificar
-                            RG_map_fw[t_qubit][l+1] = 2;
+                            RG_map_fw[t_qubit][l+1] = RED;
                         } else {
                             // Normalmente aplica a lógica da CNOT
                             RG_map_fw[t_qubit][l+1] = output[1];
@@ -270,7 +270,7 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         
                         //ver se o target e control ficam os 2 a vermelho
                         for (int nq=0; nq<NQ;nq++){
-                            if(RG_map_fw[nq][l+1]==2){
+                            if(RG_map_fw[nq][l+1]==RED){
                                 continue;
                             }
                         }
@@ -286,28 +286,28 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         int c_qubit = g2p1_ptr->fdata.c_qubit;
                         int t_qubit = g2p1_ptr->fdata.t_qubit;
                         
-                        int input_RG[2];
-                        int input_RG_c;
-                        int input_RG_t;
+                        colourT input_RG[2];
+                        colourT input_RG_c;
+                        colourT input_RG_t;
                         input_RG_c=RG_map_fw[c_qubit][l];
                         input_RG_t=RG_map_fw[t_qubit][l];
                         input_RG[0] = input_RG_c;
                         input_RG[1] = input_RG_t;
                         
                         //se for vermelho, sai
-                        if (input_RG_c==2 && input_RG_t==2) {
+                        if (input_RG_c==RED && input_RG_t==RED) {
                             continue;
                         }
                         
                         //compute output colour for this gate
-                        int output[2];
+                        colourT output[2];
                         gate_output_2(input_RG, name, output);
                         // set colors in RG_map_fw
                         RG_map_fw[c_qubit][l+1] = output[0];
                         // Para cada qubit
-                        if (RG_map_fw[t_qubit][l] == 2) {
+                        if (RG_map_fw[t_qubit][l] == RED) {
                             // O qubit está num estado de superposição (2), então, não altere para 0 ou 1 sem verificar
-                            RG_map_fw[t_qubit][l+1] = 2;
+                            RG_map_fw[t_qubit][l+1] = RED;
                         } else {
                             // Normalmente aplica a lógica da CNOT
                             RG_map_fw[t_qubit][l+1] = output[1];
@@ -316,7 +316,7 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         
                         //ver se o target e control ficam os 2 a vermelho
                         for (int nq=0; nq<NQ;nq++){
-                            if(RG_map_fw[nq][l+1]==2){
+                            if(RG_map_fw[nq][l+1]==RED){
                                 continue;
                             }
                         }
@@ -356,15 +356,15 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                     for (int g = 0; g < num_gates; g++, g1p0_ptr++) {
                         int name = g1p0_ptr->name;
                         int qubit = g1p0_ptr->qubit;
-                        int input_RG;
-                        int output_RG;                    
+                        colourT input_RG;
+                        colourT output_RG;
                         
                         //get colors from RG_map_bw
                         //ver n�mero que est� no mapa para este qubit nesta layer: 0,1 ou 2
                         output_RG=RG_map_bw[qubit][l+1];
                         
                         //se for vermelho, sai
-                        if (output_RG==2) {
+                        if (output_RG==RED) {
                             continue;
                         }
                         
@@ -376,7 +376,7 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         
                         
                         for (int nq=0; nq<NQ;nq++){
-                            if(RG_map_bw[nq][l+1]==2){
+                            if(RG_map_bw[nq][l+1]==RED){
                                 continue;
                             }
                         }
@@ -389,14 +389,14 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                     for (int g = 0; g < num_gates; g++, g1p1_ptr++) {
                         int name = g1p1_ptr->fdata.name;
                         int qubit = g1p1_ptr->fdata.qubit;
-                        int input_RG;
-                        int output_RG;
+                        colourT input_RG;
+                        colourT output_RG;
                         //get colors from RG_map_bw
                         //ver n�mero que est� no mapa para este qubit nesta layer: 0,1 ou 2
                         output_RG=RG_map_bw[qubit][l+1];
                         
                         //se for vermelho, sai
-                        if (output_RG==2) {
+                        if (output_RG==RED) {
                             continue;
                         }
                         
@@ -408,7 +408,7 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         
                         
                         for (int nq=0; nq<NQ;nq++){
-                            if(RG_map_bw[nq][l+1]==2){
+                            if(RG_map_bw[nq][l+1]==RED){
                                 continue;
                             }
                         }
@@ -425,29 +425,29 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         int t_qubit = g2p0_ptr->t_qubit;
                         
                         // Cores de saída nesta layer (isto é, cores no tempo seguinte)
-                        int output_RG_c = RG_map_bw[c_qubit][l + 1];
-                        int output_RG_t = RG_map_bw[t_qubit][l + 1];
+                        colourT output_RG_c = RG_map_bw[c_qubit][l + 1];
+                        colourT output_RG_t = RG_map_bw[t_qubit][l + 1];
                         
                         // Se ambos forem 2 (irrelevantes), continua
-                        if (output_RG_c == 2 && output_RG_t == 2) {
+                        if (output_RG_c == RED && output_RG_t == RED) {
                             continue;
                         }
                         
-                        int output_RG[2] = {output_RG_c, output_RG_t};
-                        int input[2];
+                        colourT output_RG[2] = {output_RG_c, output_RG_t};
+                        colourT input[2];
                         gate_output_2(output_RG, name, input);  // Calcula input RG a partir de output RG
                         
                         // Atualiza RG_map_bw (estamos no backward sweep!)
                         RG_map_bw[c_qubit][l] = input[0];
                         
-                        if (output_RG_t == 2) {
-                            RG_map_bw[t_qubit][l] = 2;
+                        if (output_RG_t == RED) {
+                            RG_map_bw[t_qubit][l] = RED;
                         } else {
                             RG_map_bw[t_qubit][l] = input[1];
                         }
                         
                         for (int nq=0; nq<NQ;nq++){
-                            if(RG_map_fw[nq][l+1]==2){
+                            if(RG_map_fw[nq][l+1]==RED){
                                 continue;;
                             }
                         }
@@ -464,29 +464,29 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
                         int t_qubit = g2p1_ptr->fdata.t_qubit;
                         
                         // Cores de saída nesta layer (estado depois da porta)
-                        int output_RG_c = RG_map_bw[c_qubit][l + 1];
-                        int output_RG_t = RG_map_bw[t_qubit][l + 1];
+                        colourT output_RG_c = RG_map_bw[c_qubit][l + 1];
+                        colourT output_RG_t = RG_map_bw[t_qubit][l + 1];
                         
                         // Se ambos forem irrelevantes (2), não há nada a fazer
-                        if (output_RG_c == 2 && output_RG_t == 2) {
+                        if (output_RG_c == RED && output_RG_t == RED) {
                             continue;
                         }
                         
-                        int output_RG[2] = {output_RG_c, output_RG_t};
-                        int input[2];
+                        colourT output_RG[2] = {output_RG_c, output_RG_t};
+                        colourT input[2];
                         gate_output_2(output_RG, name, input);  // Calcula input RG a partir de output RG
                         
                         // Atualiza RG_map_bw (backward sweep!)
                         RG_map_bw[c_qubit][l] = input[0];
                         
-                        if (output_RG_t == 2) {
-                            RG_map_bw[t_qubit][l] = 2;
+                        if (output_RG_t == RED) {
+                            RG_map_bw[t_qubit][l] = RED;
                         } else {
                             RG_map_bw[t_qubit][l] = input[1];
                         }
                         
                         for (int nq=0; nq<NQ;nq++){
-                            if(RG_map_fw[nq][l+1]==2){
+                            if(RG_map_fw[nq][l+1]==RED){
                                 continue;;
                             }
                         }
@@ -517,16 +517,16 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
 	
 	for (int a=0; a<=L; a++){
 		for (int b=0; b<NQ; b++){
-			if (RG_map_fw[b][a]==2 && RG_map_bw[b][a]==2){
+            if (RG_map_fw[b][a]==RED && RG_map_bw[b][a]==RED){
 				//printf("fw[%d][%d]=%d, bw[%d][%d]=%d\n", b, a, RG_map_fw[b][a], b, a, RG_map_bw[b][a]);
-				RG_map[b][a]=2;
+                RG_map[b][a]=RED;
 			}
 			
-			else if (RG_map_fw[b][a]==2){
+            else if (RG_map_fw[b][a]==RED){
 				//printf("fw[%d][%d]=%d, bw[%d][%d]=%d\n", b, a, RG_map_fw[b][a], b, a, RG_map_bw[b][a]);
 				RG_map[b][a]=RG_map_bw[b][a];
 			}
-			else if (RG_map_bw[b][a]==2){
+            else if (RG_map_bw[b][a]==RED){
 				//printf("fw[%d][%d]=%d, bw[%d][%d]=%d\n", b, a, RG_map_fw[b][a], b, a, RG_map_bw[b][a]);
 				RG_map[b][a]=RG_map_fw[b][a];
 			}
@@ -536,7 +536,7 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
 				RG_map[b][a]=RG_map_fw[b][a];
 			} else {
 				//printf("fw[%d][%d]=%d, bw[%d][%d]=%d\n", b, a, RG_map_fw[b][a], b, a, RG_map_bw[b][a]);
-				RG_map[b][a]=-1; //caso de conflito
+                RG_map[b][a]=INVALID; //caso de conflito
 			}
 		}
 		//printf("\n");
@@ -554,7 +554,7 @@ int* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr){
 		printf("\n");
 	} 
 */
-	int* final_states_output = new int[(L-1)*NQ];
+    colourT* final_states_output = new colourT[(L-1)*NQ];
 	//guardar no formato de um unico array
 
 	for (int q = 0; q < NQ; q++) {

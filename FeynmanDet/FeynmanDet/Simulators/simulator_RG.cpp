@@ -12,12 +12,12 @@
 
 #include "simulator_RG.hpp"
 
-static void print_RG (int *states, int NQ, int L) {
+static void print_RG (colourT *states, int NQ, int L) {
     fprintf (stderr, "Colouring: \n");
     for (int q = 0; q < NQ; q++) {
         fprintf (stderr, "qb%d: ", q);
         for (int l = 1; l < L; l++) {
-            int colour= states[q + (l - 1)*NQ];
+            colourT colour= states[q + (l - 1)*NQ];
             char s[5];
             switch (colour) {
                 case -1:
@@ -31,6 +31,9 @@ static void print_RG (int *states, int NQ, int L) {
                     break;
                 case 2:
                     snprintf (s,4,"R");
+                    break;
+                default:
+                    snprintf (s,4,"ERR");
                     break;
             }
             fprintf (stderr, "%s\t", s);
@@ -67,7 +70,7 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
     // -1 -> forward green != backward green : impossible
 
     // to store the colouring results
-    int* colours;
+    colourT* colours;
     colours=fs_bs_RG(circuit, init_state_arr, final_state_arr);
 
     print_RG (colours, NQ, L);
@@ -76,7 +79,7 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
     // verify if there is a -1 in the colouring
     // if yes, amplitude = 0 + 0j
     for(int s=0; s<(L-1)*NQ; s++){
-        if(colours[s]==-1){
+        if(colours[s]==INVALID){
             aR=0.f;
             aI=0.f;
             printf ("EARLY TERMINATION: < %llu | U | %llu > = %.6f + i %.6f\n", (unsigned long long)final_state,
@@ -153,6 +156,14 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
             sumR += pathR;
             sumI += pathI;
             path_NZ_counter++;
+            
+            // DEBUG
+            printf ("Non zero path: ");
+            for (int lll=0 ; lll<L-1 ; lll++) {
+                printf ("%llu ", ndxs[lll]);
+            }
+            printf ("= %e + i %e\n", pathR, pathI);
+
         }
         path_counter++;
 
@@ -169,8 +180,65 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                 break;
         }*/
         int ll;
-        bool carry = true;
-        for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
+        is_zero = true;
+        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && is_zero ; ll--) {
+
+            printf ("change ndxs[%d]=%llu\n", ll, ndxs[ll]);
+            is_zero = true;
+            while(is_zero) {
+                ndxs[ll]++;
+                is_zero = false;
+                if (ndxs[ll]==N && ll>0)  {
+                    ndxs[ll] = 0;
+                    break;
+                }
+                else if (ndxs[0]==N && ll==0)  {
+                    break;  // simulation finished
+                }
+                start_layer=ll;
+                printf ("changed ndxs[%d]=%llu\n", ll, ndxs[ll]);
+                // verify whether this ndxs complies with the colouring
+                for (int i=0; i<NQ && !is_zero ; i++){
+                    
+                    int const next_state_CL = colours[i+ll*NQ];
+                    
+                    if (next_state_CL== GREEN0 || next_state_CL== GREEN1) {
+                        if (next_state_CL != qb_value(i,ndxs[ll])) {
+                            is_zero=true;
+                        }
+                    }
+                } // for dos qubits
+            }  // while (is_zero)
+            printf ("END FOR LOOP ndxs[%d]=%llu\n", ll, ndxs[ll]);
+        }  // for backward change layers ndxs
+        /*for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
+            is_zero = true;
+            carry = false;
+            while (is_zero) {
+                ndxs[ll]++;
+                start_layer=ll;
+                if (ndxs[ll]==N && ll>0)  {
+                    ndxs[ll] = 0;
+                    carry = true;
+                }
+                else if (ndxs[ll]==N && ll==0)  {
+                    break;
+                }
+                // verify whether this ndxs complies with the colouring
+                is_zero = false;
+                for (int i=0; i<NQ && !is_zero ; i++){
+                    
+                    int const next_state_CL = colours[i+ll*NQ];
+                    
+                    if (next_state_CL== GREEN0 || next_state_CL== GREEN1) {
+                        if (next_state_CL != qb_value(i,ndxs[ll])) {
+                            is_zero=true;
+                        }
+                    }
+                }
+            } // while (is_zero)
+        }  // for backward change layers ndxs*/
+       /* for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
             is_zero = true;
             carry = false;
             while (is_zero) {
@@ -182,10 +250,10 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                 }
                 // verify whether this ndxs complies with the colouring
                 is_zero = false;
-                for (int i=0; i<NQ; i++){
+                for (int i=0; i<NQ && !is_zero; i++){
                     
                     int const next_state_CL = colours[i+ll*NQ];
-                    if (next_state_CL==2) continue;
+                    if (next_state_CL==RED) continue;
                     
                     if (next_state_CL != qb_value(i,ndxs[ll])) {
                         is_zero=true;
@@ -193,7 +261,7 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                     }
                 }
             }
-        }
+        }*/
 
     } // main simulation loop (while)
     aR = sumR;
