@@ -96,6 +96,7 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
     // main simulation loop
     while (ndxs[0] < N) {
 
+        //fprintf (stderr, "Main LOOP iteration\n");
         /*
         fprintf (stderr, "ndxs= ");
         for (int lll=0; lll<L-1 ; lll++)
@@ -109,7 +110,7 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
         int l;
         StateT next_state;
         bool zero_weight_layer=false;
-        bool is_zero=false;
+        //bool is_zero=false;
         
         // iterate over layers
         for (l=start_layer ; l<L ; l++) {
@@ -150,7 +151,7 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
             }
             current_state = next_state;
 
-        }
+        } // end iterating layers
         //if  (!is_zero && !zero_weight_layer) {
         if  (!zero_weight_layer) {
             sumR += pathR;
@@ -158,19 +159,22 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
             path_NZ_counter++;
             
             // DEBUG
-            printf ("Non zero path: ");
+            /*printf ("Non zero path: ");
             for (int lll=0 ; lll<L-1 ; lll++) {
                 printf ("%llu ", ndxs[lll]);
             }
-            printf ("= %e + i %e\n", pathR, pathI);
+            printf ("= %e + i %e\n", pathR, pathI);*/
 
         }
         path_counter++;
 
         // compute next path
         // updating ndxs[]
+        
+        // all paths
         /*int ll;
-        for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 ; ll--) {
+        //for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 ; ll--) {
+        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 ; ll--) {
             ndxs[ll]++;
             start_layer=ll;
             if (ndxs[ll]==N && ll>0)  { 
@@ -179,91 +183,46 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
             else
                 break;
         }*/
+        
+        
+        // compute next path skipping invalid GREENs
         int ll;
-        is_zero = true;
-        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && is_zero ; ll--) {
+        bool invalid_state_green = true;
+        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && invalid_state_green ; ll--) {
 
-            printf ("change ndxs[%d]=%llu\n", ll, ndxs[ll]);
-            is_zero = true;
-            while(is_zero) {
+            //printf ("change ndxs[%d]=%llu\n", ll, ndxs[ll]);
+            invalid_state_green = true;
+            while(invalid_state_green) {
                 ndxs[ll]++;
-                is_zero = false;
-                if (ndxs[ll]==N && ll>0)  {
+                if (ndxs[ll]==N && ll>0)  { // this layer overflows
                     ndxs[ll] = 0;
-                    break;
+                    break;        // break only from inner loop
                 }
-                else if (ndxs[0]==N && ll==0)  {
-                    break;  // simulation finished
+                else if (ndxs[0]==N && ll==0)  { // simulation finished
+                    invalid_state_green = false; // terminate outer loop
+                    break;   // terminate inner loop
                 }
                 start_layer=ll;
-                printf ("changed ndxs[%d]=%llu\n", ll, ndxs[ll]);
+                //printf ("changed ndxs[%d]=%llu\n", ll, ndxs[ll]);
+                invalid_state_green = false;
                 // verify whether this ndxs complies with the colouring
-                for (int i=0; i<NQ && !is_zero ; i++){
+                for (int i=0; i<NQ && !invalid_state_green ; i++){
                     
                     int const next_state_CL = colours[i+ll*NQ];
                     
                     if (next_state_CL== GREEN0 || next_state_CL== GREEN1) {
                         if (next_state_CL != qb_value(i,ndxs[ll])) {
-                            is_zero=true;
+                            invalid_state_green=true; // break from all loops
+                            //ndxs[ll] += (1 << i)- 1 ; // skip all  intermediate non valid states
                         }
                     }
-                } // for dos qubits
-            }  // while (is_zero)
-            printf ("END FOR LOOP ndxs[%d]=%llu\n", ll, ndxs[ll]);
-        }  // for backward change layers ndxs
-        /*for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
-            is_zero = true;
-            carry = false;
-            while (is_zero) {
-                ndxs[ll]++;
-                start_layer=ll;
-                if (ndxs[ll]==N && ll>0)  {
-                    ndxs[ll] = 0;
-                    carry = true;
-                }
-                else if (ndxs[ll]==N && ll==0)  {
-                    break;
-                }
-                // verify whether this ndxs complies with the colouring
-                is_zero = false;
-                for (int i=0; i<NQ && !is_zero ; i++){
-                    
-                    int const next_state_CL = colours[i+ll*NQ];
-                    
-                    if (next_state_CL== GREEN0 || next_state_CL== GREEN1) {
-                        if (next_state_CL != qb_value(i,ndxs[ll])) {
-                            is_zero=true;
-                        }
-                    }
-                }
-            } // while (is_zero)
-        }  // for backward change layers ndxs*/
-       /* for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
-            is_zero = true;
-            carry = false;
-            while (is_zero) {
-                ndxs[ll]++;
-                start_layer=ll;
-                if (ndxs[ll]==N && ll>0)  {
-                    ndxs[ll] = 0;
-                    carry = true;
-                }
-                // verify whether this ndxs complies with the colouring
-                is_zero = false;
-                for (int i=0; i<NQ && !is_zero; i++){
-                    
-                    int const next_state_CL = colours[i+ll*NQ];
-                    if (next_state_CL==RED) continue;
-                    
-                    if (next_state_CL != qb_value(i,ndxs[ll])) {
-                        is_zero=true;
-                        break;
-                    }
-                }
-            }
-        }*/
+                } // for to verify qubits and green
+            }  // while (invalid_state_green)
+            //printf ("END FOR LOOP ndxs[%d]=%llu\n", ll, ndxs[ll]);
+        }    // for backward change layers ndxs
 
     } // main simulation loop (while)
+    fprintf (stderr, "Main LOOP terminated\n");
     aR = sumR;
     aI = sumI;
 

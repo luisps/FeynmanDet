@@ -152,7 +152,7 @@ static int qbv_given_previous_gate (TCircuit *circuit, int l, int n_qb, StateT p
                         int name = g1p1_ptr->fdata.name;
                         int prev_qbv = qb_value(n_qb, previous_state);
                         qbv = gate_output_1(prev_qbv, name);
-                        printf ("gate name: %d ; input=%d; out=%d;\n",name, prev_qbv,qbv);
+                        //printf ("gate name: %d ; input=%d; out=%d;\n",name, prev_qbv,qbv);
                        return qbv;
                     }
                 }
@@ -346,18 +346,20 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             }
             current_state = next_state;
 
-        }
+        } // for all layers
+        
         //if  (!is_zero && !zero_weight_layer) {
         if  (!zero_weight_layer) {
             sumR += pathR;
             sumI += pathI;
             path_NZ_counter++;
             // DEBUG
+            /*
             printf ("Non zero path: ");
             for (int lll=0 ; lll<L-1 ; lll++) {
                 printf ("%llu ", ndxs[lll]);
             }
-            printf ("= %e + i %e\n", pathR, pathI);
+            printf ("= %e + i %e\n", pathR, pathI);*/
         }
         path_counter++;
 
@@ -411,7 +413,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             }  // while (is_zero)
         }*/
 
-        int ll;
+        /*int ll;
         bool carry = true;
         for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
             is_zero = true;
@@ -463,7 +465,51 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                 }
             } // while (is_zero)
         }  // for backward change layers ndxs
+         */
+        
+        // compute next path skipping invalid GREENs
+        int ll;
+        bool invalid_state_green = true;
+        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && invalid_state_green ; ll--) {
 
+            //printf ("change ndxs[%d]=%llu\n", ll, ndxs[ll]);
+            invalid_state_green = true;
+            while(invalid_state_green) {
+                ndxs[ll]++;
+                if (ndxs[ll]==N && ll>0)  { // this layer overflows
+                    ndxs[ll] = 0;
+                    break;        // break only from inner loop
+                }
+                else if (ndxs[0]==N && ll==0)  { // simulation finished
+                    invalid_state_green = false; // terminate outer loop
+                    break;   // terminate inner loop
+                }
+                start_layer=ll;
+                //printf ("changed ndxs[%d]=%llu\n", ll, ndxs[ll]);
+                invalid_state_green = false;
+                // verify whether this ndxs complies with the colouring
+                for (int i=0; i<NQ && !invalid_state_green ; i++){
+                    
+                    int const next_state_CL = colours[i+ll*NQ];
+                    
+                    if (next_state_CL== GREEN0 || next_state_CL== GREEN1) {
+                        if (next_state_CL != qb_value(i,ndxs[ll])) {
+                            invalid_state_green=true; // break from all loops
+                            //ndxs[ll] += (1 << i)- 1 ; // skip all  intermediate non valid states
+                        }
+                    }
+                    else if (next_state_CL == BLUE) {
+                        StateT const prev_state = (ll==0 ? init_state : ndxs[ll-1]);
+                        int const pred_qb_value = qbv_given_previous_gate(circuit, ll, i, prev_state);
+                        if (pred_qb_value != qb_value(i,ndxs[ll])) {
+                            invalid_state_green=true;
+                        }
+                    }
+                } // for to verify qubits and green
+            }  // while (invalid_state_green)
+            //printf ("END FOR LOOP ndxs[%d]=%llu\n", ll, ndxs[ll]);
+        }    // for backward change layers ndxs
+        
     } // main simulation loop (while)
     aR = sumR;
     aI = sumI;
