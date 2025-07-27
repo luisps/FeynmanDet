@@ -20,7 +20,7 @@ static void print_PB (colourT *states, int NQ, int L) {
         for (int l = 1; l < L; l++) {
             colourT colour= states[q + (l - 1)*NQ];
             char s[5];
-            switch (colour) {
+            switch (colour & 0x0FF) {
                 case INVALID:
                     snprintf (s,4,"I");
                     break;
@@ -39,6 +39,15 @@ static void print_PB (colourT *states, int NQ, int L) {
                 case BLUE:
                     snprintf (s,4,"B");
                     break;
+                case BLUE_I:
+                    snprintf (s,4,"BI");
+                    break;
+                case BLUE_X:
+                    snprintf (s,4,"BX");
+                    break;
+                case BLUE_CX:
+                    snprintf (s,4,"BCX");
+                    break;
                 default:
                     snprintf (s,4,"ERR");
                     break;
@@ -50,7 +59,7 @@ static void print_PB (colourT *states, int NQ, int L) {
     fprintf (stderr, "\n");
 }
 
-static int gate_output_1(int qbv, int name){
+/*static int gate_output_1(int qbv, int name){
     int out=0;
     
     switch (name){
@@ -215,7 +224,7 @@ static int qbv_given_previous_gate (TCircuit *circuit, int l, int n_qb, StateT p
         } // switch
     } // for GT
     return 0;
-}
+}*/
 
 void printBits(size_t const size, void const * const ptr)
 {
@@ -305,32 +314,12 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
         int l;
         StateT next_state;
         bool zero_weight_layer=false;
-        bool is_zero=false;
         
         // iterate over layers
         for (l=start_layer ; l<L ; l++) {
             float lR=1.f;
             float lI=0.f;
             next_state = (l< L-1 ? ndxs[l] : final_state);
-            /*is_zero = false;
-
-            // verify whether this next state is allowed by colouring
-            if(l < L-1){
-                for (int i=0; i<NQ; i++){
-                    
-                    int const next_state_CL = colours[i+l*NQ];
-                    if (next_state_CL==2) continue;
-                    
-                    if (next_state_CL != qb_value(i,next_state)) {
-                        pathR = pathI = 0.f;
-                        is_zero=true;
-                        break;
-                    }
-                }
-            }
-            if(is_zero){
-                break;
-            }*/
         
             TCircuitLayer *layer = &circuit->layers[l];
             layer_w(layer, l, current_state, next_state, lR, lI);
@@ -348,7 +337,6 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 
         } // for all layers
         
-        //if  (!is_zero && !zero_weight_layer) {
         if  (!zero_weight_layer) {
             sumR += pathR;
             sumI += pathI;
@@ -365,117 +353,21 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 
         // compute next path
         // updating ndxs[]
-        /*int ll;
-        for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 ; ll--) {
-            ndxs[ll]++;
-            start_layer=ll;
-            if (ndxs[ll]==N && ll>0)  { 
-                ndxs[ll] = 0;
-            }
-            else
-                break;
-        }*/
-        /*int ll;
-        bool carry = true;
-        for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
-            is_zero = true;
-            carry = false;
-            while (is_zero) {
-                ndxs[ll]++;
-                start_layer=ll;
-                if (ndxs[ll]==N && ll>0)  {
-                    ndxs[ll] = 0;
-                    carry = true;
-                }
-                // verify whether this ndxs complies with the colouring
-                is_zero = false;
-                for (int i=0; i<NQ && !is_zero; i++){
-                    
-                    int const next_state_CL = colours[i+ll*NQ];
-                    //if (next_state_CL==PINK) continue;
-                    if (next_state_CL==BLUE) {
-                        int blue_qbv = qbv_given_previous_gate(circuit, ll, i, (ll==0 ? init_state : ndxs[ll-1]));
-                        int qbv = qb_value(i, ndxs[ll]);
-                        if (qbv != blue_qbv) {
-                            printf ("BLUE would reject path ");
-                            for (int lll=0 ; lll<L-1 ; lll++) {
-                                printf ("%llu ", ndxs[lll]);
-                            }
-                            printf ("in layer %d, qubit %d\n", ll, i);
-                            is_zero = true;
-                        }
-                        //continue;
-                    }
-                    if ((next_state_CL==GREEN0 || next_state_CL==GREEN1) && next_state_CL != qb_value(i,ndxs[ll])) {
-                        is_zero=true;
-                    }
-                } // for (qubits)
-            }  // while (is_zero)
-        }*/
-
-        /*int ll;
-        bool carry = true;
-        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
-            is_zero = true;
-            carry = false;
-            while (is_zero) {
-                ndxs[ll]++;
-                start_layer=ll;
-                if (ndxs[ll]==N && ll>0)  {
-                    ndxs[ll] = 0;
-                    carry = true;
-                }
-                else if (ndxs[ll]==N && ll==0)  {
-                    break;
-                }
-                printf ("Evaluating path ");
-                for (int lll=0 ; lll<L-1 ; lll++) {
-                    printf ("%llu ", ndxs[lll]);
-                }
-                printf ("(carry=%s)\n", (carry?"TRUE":"FALSE"));
-                // verify whether this ndxs complies with the colouring
-                is_zero = false;
-                for (int i=0; i<NQ && !is_zero ; i++){
-                    
-                    int const next_state_CL = colours[i+ll*NQ];
-                    
-                    if (next_state_CL== BLUE) {
-                        int blue_qbv = qbv_given_previous_gate(circuit, ll, i, (ll>0 ? ndxs[ll-1] : init_state));
-                        int qbv = qb_value(i,ndxs[ll]);
-                        if (qbv != blue_qbv) {
-                            printf ("BLUE rejects path ");
-                            for (int lll=0 ; lll<L-1 ; lll++) {
-                                printf ("%llu ", ndxs[lll]);
-                            }
-                            printf ("in layer %d, qubit %d\n", ll, i);
-                            printf ("blue_qbv= %d, qbv %d\n", blue_qbv, qbv);
-                            is_zero = true;
-                        }
-                    }
-                    if (next_state_CL== GREEN0 ||next_state_CL== GREEN1) {
-                        if (next_state_CL != qb_value(i,ndxs[ll])) {
-                            printf ("GREEN rejects path ");
-                            for (int lll=0 ; lll<L-1 ; lll++) {
-                                printf ("%llu ", ndxs[lll]);
-                            }
-                            printf ("in layer %d, qubit %d\n", ll, i);
-                            is_zero=true;
-                        }
-                    }
-                }
-            } // while (is_zero)
-        }  // for backward change layers ndxs
-         */
-        
-        // compute next path skipping invalid GREENs
+    
+        // compute next path skipping invalid GREENs and fixed BLUEs
         int ll;
         bool invalid_state_green = true;
         for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 && invalid_state_green ; ll--) {
 
             //printf ("change ndxs[%d]=%llu\n", ll, ndxs[ll]);
+            // get the state from the previous layer. Will need it
+            StateT const prev_state = (ll==0 ? init_state : ndxs[ll-1]);
+
             invalid_state_green = true;
             while(invalid_state_green) {
                 ndxs[ll]++;
+                if (ll==0)  fprintf (stderr, "ndxs[0] = %llu \n", ndxs[0]);
+
                 if (ndxs[ll]==N && ll>0)  { // this layer overflows
                     ndxs[ll] = 0;
                     break;        // break only from inner loop
@@ -489,22 +381,39 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                 invalid_state_green = false;
                 // verify whether this ndxs complies with the colouring
                 for (int i=0; i<NQ && !invalid_state_green ; i++){
-                    
                     int const next_state_CL = colours[i+ll*NQ];
                     
                     if (next_state_CL== GREEN0 || next_state_CL== GREEN1) {
                         if (next_state_CL != qb_value(i,ndxs[ll])) {
-                            invalid_state_green=true; // break from all loops
-                            //ndxs[ll] += (1 << i)- 1 ; // skip all  intermediate non valid states
+                            invalid_state_green=true; // break from inner loop
+                            ndxs[ll] |= ((1 << i)- 1) ; // skip all  intermediate non valid states
                         }
                     }
-                    else if (next_state_CL == BLUE) {
-                        StateT const prev_state = (ll==0 ? init_state : ndxs[ll-1]);
+                    else if (next_state_CL == BLUE_I || next_state_CL == BLUE_X) {
+                        int const pred_qb_value = (next_state_CL == BLUE_I ? qb_value(i,prev_state) : !qb_value(i,prev_state));
+                        if (pred_qb_value != qb_value(i,ndxs[ll])) {
+                            invalid_state_green=true;
+                            ndxs[ll] |= ((1 << i)- 1) ; // skip all  intermediate non valid states
+                        }
+                    }
+                    /*else if (next_state_CL == BLUE) {
                         int const pred_qb_value = qbv_given_previous_gate(circuit, ll, i, prev_state);
                         if (pred_qb_value != qb_value(i,ndxs[ll])) {
                             invalid_state_green=true;
                         }
+                    }*/
+                    else if (next_state_CL > 255 || next_state_CL == BLUE_CX) {
+                        // get the control qubit index
+                        int const c_qb = next_state_CL >> 8;
+                        // get the control qubit value
+                        int const c_qb_v = qb_value(c_qb, prev_state);
+                        int const pred_qb_value = (c_qb_v == 0 ? qb_value(i,prev_state) : !qb_value(i,prev_state));
+                        if (pred_qb_value != qb_value(i,ndxs[ll])) {
+                            invalid_state_green=true;
+                            ndxs[ll] |= ((1 << i)- 1) ; // skip all  intermediate non valid states
+                        }
                     }
+
                 } // for to verify qubits and green
             }  // while (invalid_state_green)
             //printf ("END FOR LOOP ndxs[%d]=%llu\n", ll, ndxs[ll]);

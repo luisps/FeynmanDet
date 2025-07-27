@@ -12,7 +12,12 @@ typedef enum colourTT{
     GREEN1=1,
     RED=2,
     PINK=3,
-    BLUE=4
-} colourT;
+    BLUE=4,
+    BLUE_I=5,
+    BLUE_X=6,
+    BLUE_CX=7,
+} colourCodes;
+
+typedef int colourT;
 
 #endif

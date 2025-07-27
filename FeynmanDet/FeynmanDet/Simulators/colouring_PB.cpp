@@ -12,28 +12,28 @@
 
 // Correspondence between gate names numbers and strings
 // G1P0 - 1 qubit, no parameters
-// 'id' - 0
-// 'h'  - 1 B
-// 'x'  - 2
-// 'y'  - 3
-// 'z'  - 4
-// 's'  - 5
-// 't'  - 6
+// 'id' - 0 BLUE_I
+// 'h'  - 1 Branching
+// 'x'  - 2 BLUE_X
+// 'y'  - 3 BLUE_X
+// 'z'  - 4 BLUE_I
+// 's'  - 5 BLUE_I
+// 't'  - 6 BLUE_I
 // G1P1 - 1 qubit, 1 parameter
-// 'rx'  - 11 B
-// 'ry'  - 12 B
-// 'rz'  - 13
-// 'p'  - 14
+// 'rx'  - 11 Branching
+// 'ry'  - 12 Branching
+// 'rz'  - 13 BLUE_I
+// 'p'  - 14  BLUE_I
 
 
 // pega no input estado inicial e gate -> d� o estado final (para ver se � 1 ou 0)
 // gates 2 qubits
 // G2P0 - 2 qubits, no parameters
 // 'id2'  - 20    Used for errors
-// 'cx'  - 21 B
-// 'cz'  - 22
+// 'cx'  - 21 control: BLUE_I; target BLUE_CX
+// 'cz'  - 22 control: BLUE_I; target BLUE_I
 // G2P1 - 2 qubits, 1 parameter
-// 'cp'  - 31
+// 'cp'  - 31 BLUE_I
 
 
 
@@ -62,8 +62,12 @@ void fs_PB(TCircuit *circuit, colourT* states_colour){
                         // PINK or BLUE
                         if (name==1) {  // Hadamard - branching
                             states_colour[l*NQ+qubit] = PINK;
+                        } else if (name==2 || name==3) { // X or Y
+                            //states_colour[l*NQ+qubit] = BLUE;
+                            states_colour[l*NQ+qubit] = BLUE_X;
                         } else {
-                            states_colour[l*NQ+qubit] = BLUE;
+                            //states_colour[l*NQ+qubit] = BLUE;
+                            states_colour[l*NQ+qubit] = BLUE_I;
                         }
                     }
                     break;
@@ -80,7 +84,8 @@ void fs_PB(TCircuit *circuit, colourT* states_colour){
                         if (name==11 || name==12) {  // RX,RY - branching
                             states_colour[l*NQ+qubit] = PINK;
                         } else {
-                            states_colour[l*NQ+qubit] = BLUE;
+                            //states_colour[l*NQ+qubit] = BLUE;
+                            states_colour[l*NQ+qubit] = BLUE_I;
                         }
                     }
                     break;
@@ -95,22 +100,35 @@ void fs_PB(TCircuit *circuit, colourT* states_colour){
                         colourT const c_colour= states_colour[l*NQ+c_qubit];
                         colourT const t_colour= states_colour[l*NQ+t_qubit];
                         // PINK or BLUE. No PINKs in this case
-                        states_colour[l*NQ+c_qubit] = (c_colour==RED ? BLUE : c_colour);
-                        states_colour[l*NQ+t_qubit] = (t_colour==RED ? BLUE : t_colour);
+                        // control
+                        states_colour[l*NQ+c_qubit] = (c_colour==RED ? BLUE_I : c_colour);
+                        // is this a CX or CZ ?
+                        if (name==21) { // CX
+                            if (t_colour != RED) { // this is green
+                                states_colour[l*NQ+t_qubit] = t_colour;
+                            } else {  // RED becomes BLUE_CX
+                                // encode the index of the control qubit on the MS bytes
+                                states_colour[l*NQ+t_qubit] = BLUE_CX | (c_qubit << 8);
+                                
+                            }
+                        } else { // CZ
+                            states_colour[l*NQ+t_qubit] = (t_colour==RED ? BLUE_I : t_colour);
+                        }
                     }
                     break;
                 }
                 case 3: {
                     TGate2P1* g2p1_ptr = (TGate2P1*)gates_ptr;
                     for (int g = 0; g < num_gates; g++, g2p1_ptr++) {
-                        int name = g2p1_ptr->fdata.name;
+                        // necessarily CP
+                        //int name = g2p1_ptr->fdata.name;
                         int c_qubit = g2p1_ptr->fdata.c_qubit; //qubit que participa na gate
                         int t_qubit = g2p1_ptr->fdata.t_qubit;
                         colourT const c_colour= states_colour[l*NQ+c_qubit];
                         colourT const t_colour= states_colour[l*NQ+t_qubit];
                         // PINK or BLUE. No PINKs in this case
-                        states_colour[l*NQ+c_qubit] = (c_colour==RED ? BLUE : c_colour);
-                        states_colour[l*NQ+t_qubit] = (t_colour==RED ? BLUE : t_colour);
+                        states_colour[l*NQ+c_qubit] = (c_colour==RED ? BLUE_I : c_colour);
+                        states_colour[l*NQ+t_qubit] = (t_colour==RED ? BLUE_I : t_colour);
                     }
                     break;
                 }

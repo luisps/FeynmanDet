@@ -194,6 +194,7 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
             invalid_state_green = true;
             while(invalid_state_green) {
                 ndxs[ll]++;
+                if (ll==0)  fprintf (stderr, "ndxs[0] = %llu \n", ndxs[0]);
                 if (ndxs[ll]==N && ll>0)  { // this layer overflows
                     ndxs[ll] = 0;
                     break;        // break only from inner loop
@@ -207,13 +208,13 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                 invalid_state_green = false;
                 // verify whether this ndxs complies with the colouring
                 for (int i=0; i<NQ && !invalid_state_green ; i++){
-                    
+
                     int const next_state_CL = colours[i+ll*NQ];
                     
                     if (next_state_CL== GREEN0 || next_state_CL== GREEN1) {
                         if (next_state_CL != qb_value(i,ndxs[ll])) {
                             invalid_state_green=true; // break from all loops
-                            //ndxs[ll] += (1 << i)- 1 ; // skip all  intermediate non valid states
+                            ndxs[ll] |= ((1 << i)- 1) ; // skip all  intermediate non valid states
                         }
                     }
                 } // for to verify qubits and green
