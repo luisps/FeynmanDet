@@ -301,11 +301,11 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
     // main simulation loop
     while (ndxs[0] < N) {
 
-        /*
+        
         fprintf (stderr, "ndxs= ");
         for (int lll=0; lll<L-1 ; lll++)
-            fprintf (stderr, "%llu ", ndxs[lll]);
-        fprintf (stderr, "\n");*/
+            fprintf (stderr, "\t%05llu", ndxs[lll]);
+        fprintf (stderr, "\n");
 
         float pathR = (start_layer==0? 1.f : wR[start_layer-1]);
         float pathI = (start_layer==0? 0.f : wI[start_layer-1]);
@@ -377,7 +377,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                     break;   // terminate inner loop
                 }
                 start_layer=ll;
-                //printf ("changed ndxs[%d]=%llu\n", ll, ndxs[ll]);
+                //printf ("changed ndxs[%d]=%llu (ndxs[0] = %llu) \n", ll, ndxs[ll], ndxs[0]);
                 invalid_state_green = false;
                 // verify whether this ndxs complies with the colouring
                 for (int i=0; i<NQ && !invalid_state_green ; i++){

@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include "BaseFunctionalty/circuit.h"
 #include "Simulators/simulator_RG.hpp"
+#include "Simulators/simulator_RG_old.hpp"
 #include "Simulators/simulator_PB.hpp"
 #include "Simulators/simulator_all.hpp"
 #include <time.h>
@@ -57,10 +58,13 @@ int main(int argc, char *argv[]) {
             fprintf (stdout, "ALL_PATHS\n");
             break;
         case 1:
-            fprintf (stdout, "RG_PATHS\n");
+            fprintf (stdout, "RG_PATHS (original)\n");
             break;
         case 2:
             fprintf (stdout, "PB_PATHS\n");
+            break;
+        case 3:
+            fprintf (stdout, "RG_PATHS (new: has errors)\n");
             break;
 
         default:
@@ -105,10 +109,13 @@ int main(int argc, char *argv[]) {
                 simulate_all_paths(circuit, init_state, final_state, aR, aI);
                 break;
             case 1:
-                simulate_RG_paths(circuit, init_state, final_state, aR, aI);
+                simulate_RG_paths_old(circuit, init_state, final_state, aR, aI);
                 break;
             case 2:
                 simulate_PB_paths(circuit, init_state, final_state, aR, aI);
+                break;
+            case 3:
+                simulate_RG_paths(circuit, init_state, final_state, aR, aI);
                 break;
 
             default:
