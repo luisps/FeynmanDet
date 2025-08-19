@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include "BaseFunctionalty/circuit.h"
 #include "Simulators/simulator_RG.hpp"
-#include "Simulators/simulator_RG_old.hpp"
+#include "Simulators/simulator_RG_new_errors.hpp"
 #include "Simulators/simulator_PB.hpp"
 #include "Simulators/simulator_all.hpp"
 #include <time.h>
@@ -25,6 +25,14 @@ int main(int argc, char *argv[]) {
 
     char fileName[256];
     int algorithm = 1, fs_int=0;
+    
+    if (argc==1) {  // print usage
+        fprintf (stderr, "Usage: ./FeynmanDet [circ] [final state] [alg] [n_threads]\n");
+        fprintf (stderr, "\talg=0 - ALL PATHS\n");
+        fprintf (stderr, "\talg=1 - RED GREEN\n");
+        fprintf (stderr, "\talg=2 - PINK BLUE\n");
+        fprintf (stderr, "\n");
+    }
 
     if (argc>=2) { // get circuit name
         snprintf (fileName, 255, "circuits/circuit_%s.data", argv[1]);
@@ -109,13 +117,13 @@ int main(int argc, char *argv[]) {
                 simulate_all_paths(circuit, init_state, final_state, aR, aI);
                 break;
             case 1:
-                simulate_RG_paths_old(circuit, init_state, final_state, aR, aI);
+                simulate_RG_paths(circuit, init_state, final_state, aR, aI);
                 break;
             case 2:
                 simulate_PB_paths(circuit, init_state, final_state, aR, aI);
                 break;
             case 3:
-                simulate_RG_paths(circuit, init_state, final_state, aR, aI);
+                simulate_RG_paths_new_errors(circuit, init_state, final_state, aR, aI);
                 break;
 
             default:
