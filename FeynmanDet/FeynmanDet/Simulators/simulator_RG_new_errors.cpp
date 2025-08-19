@@ -10,14 +10,14 @@
 #include <time.h>
 #include <iostream>
 
-#include "simulator_RG_old.hpp"
+#include "simulator_RG_new_errors.hpp"
 
-static void print_RG (int *states, int NQ, int L) {
+static void print_RG (colourT *states, int NQ, int L) {
     fprintf (stderr, "Colouring: \n");
     for (int q = 0; q < NQ; q++) {
         fprintf (stderr, "qb%d: ", q);
         for (int l = 1; l < L; l++) {
-            int colour= states[q + (l - 1)*NQ];
+            colourT colour= states[q + (l - 1)*NQ];
             char s[5];
             switch (colour) {
                 case -1:
@@ -32,6 +32,9 @@ static void print_RG (int *states, int NQ, int L) {
                 case 2:
                     snprintf (s,4,"R");
                     break;
+                default:
+                    snprintf (s,4,"ERR");
+                    break;
             }
             fprintf (stderr, "%s\t", s);
         }
@@ -40,12 +43,14 @@ static void print_RG (int *states, int NQ, int L) {
     fprintf (stderr, "\n");
 }
 
-void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
+void simulate_RG_paths_new_errors (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
 
     const int L = circuit->size->num_layers;
-    StateT *ndxs = new StateT[L-1];
+    // current state at each layer
+    StateT *state = new StateT[L-1];
+    // state iterators
+    FixedBitsSequence2 *state_it = new FixedBitsSequence2[L-1];
     const int NQ=circuit->size->num_qubits;
-    const StateT N = 1 << NQ;
     StateT path_counter=0, path_NZ_counter=0;
 
     float* wR=new float[L-1];
@@ -67,32 +72,54 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
     // -1 -> forward green != backward green : impossible
 
     // to store the colouring results
-    int* colours;
+    colourT* colours;
     colours=fs_bs_RG(circuit, init_state_arr, final_state_arr);
 
     print_RG (colours, NQ, L);
     int start_layer=0;
 
-    // verify if there is a -1 in the colouring
+
+    // init the states and verify if there is a -1 in the colouring
     // if yes, amplitude = 0 + 0j
-    for(int s=0; s<(L-1)*NQ; s++){
-        if(colours[s]==-1){
-            aR=0.f;
-            aI=0.f;
-            printf ("EARLY TERMINATION: < %llu | U | %llu > = %.6f + i %.6f\n", (unsigned long long)final_state,
-                (unsigned long long)init_state, aR, aI);
-            return;
-        }
+    for (int l = 0; l < L-1; l++) {
+        int n_fixed_bits;
+        int fixed_bits[sizeof(StateT)];
+        int fixed_values[sizeof(StateT)];
+        n_fixed_bits=0;
+        for (int q = 0; q < NQ; q++) {
+            colourT colour= colours[q + l*NQ];
+            switch (colour) {
+                case INVALID:
+                    aR=0.f;
+                    aI=0.f;
+                    printf ("EARLY TERMINATION: < %llu | U | %llu > = %.6f + i %.6f\n", (unsigned long long)final_state,
+                            (unsigned long long)init_state, aR, aI);
+                    return;
+                    break;
+                case GREEN0:
+                case GREEN1:
+                    fixed_bits[n_fixed_bits] = q;
+                    fixed_values[n_fixed_bits] = colour;
+                    n_fixed_bits++;
+                    break;
+            }
+        }  // end iterate over this layer qubits
+        // initialize iterator
+        state_it[l].init_iterator(NQ, n_fixed_bits, fixed_bits, fixed_values);
     }
 
     // Simulation starts
 
-    // all intermediate layers indexes to 0
-    for (int i=0 ; i<L-1 ; i++) ndxs[i]=0 ;
-
+    // all intermediate layers are placed in first in sequence
+    for (int l=0 ; l<L-1 ; l++) {
+        state_it[l].generate_next_in_sequence(state[l]) ;
+    }
+    
     // main simulation loop
-    while (ndxs[0] < N) {
+    bool finish_simulation=false;
+    while ( ! finish_simulation)  {
 
+        //fprintf (stderr, "Main LOOP iteration\n");
         /*
         fprintf (stderr, "ndxs= ");
         for (int lll=0; lll<L-1 ; lll++)
@@ -101,37 +128,18 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
 
         float pathR = (start_layer==0? 1.f : wR[start_layer-1]);
         float pathI = (start_layer==0? 0.f : wI[start_layer-1]);
-        StateT current_state = (start_layer==0? init_state : ndxs[start_layer-1]);
+        StateT current_state = (start_layer==0? init_state : state[start_layer-1]);
 
         int l;
         StateT next_state;
         bool zero_weight_layer=false;
-        bool is_zero=false;
+        //bool is_zero=false;
         
         // iterate over layers
         for (l=start_layer ; l<L ; l++) {
             float lR=1.f;
             float lI=0.f;
-            next_state = (l< L-1 ? ndxs[l] : final_state);
-            /*is_zero = false;
-
-            // verify whether this next state is allowed by colouring
-            if(l < L-1){
-                for (int i=0; i<NQ; i++){
-                    
-                    int const next_state_CL = colours[i+l*NQ];
-                    if (next_state_CL==2) continue;
-                    
-                    if (next_state_CL != qb_value(i,next_state)) {
-                        pathR = pathI = 0.f;
-                        is_zero=true;
-                        break;
-                    }
-                }
-            }
-            if(is_zero){
-                break;
-            }*/
+            next_state = (l< L-1 ? state[l] : final_state);
         
             TCircuitLayer *layer = &circuit->layers[l];
             layer_w(layer, l, current_state, next_state, lR, lI);
@@ -147,19 +155,30 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
             }
             current_state = next_state;
 
-        }
+        } // end iterating layers
         //if  (!is_zero && !zero_weight_layer) {
         if  (!zero_weight_layer) {
             sumR += pathR;
             sumI += pathI;
             path_NZ_counter++;
+            
+            // DEBUG
+            /*printf ("Non zero path: ");
+            for (int lll=0 ; lll<L-1 ; lll++) {
+                printf ("%llu ", state[lll]);
+            }
+            printf ("= %e + i %e\n", pathR, pathI);*/
+
         }
         path_counter++;
 
         // compute next path
         // updating ndxs[]
+        
+        // all paths
         /*int ll;
-        for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 ; ll--) {
+        //for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 ; ll--) {
+        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 ; ll--) {
             ndxs[ll]++;
             start_layer=ll;
             if (ndxs[ll]==N && ll>0)  { 
@@ -168,34 +187,24 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
             else
                 break;
         }*/
-        int ll;
-        bool carry = true;
-        for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 && carry; ll--) {
-            is_zero = true;
-            carry = false;
-            while (is_zero) {
-                ndxs[ll]++;
-                start_layer=ll;
-                if (ndxs[ll]==N && ll>0)  {
-                    ndxs[ll] = 0;
-                    carry = true;
-                }
-                // verify whether this ndxs complies with the colouring
-                is_zero = false;
-                for (int i=0; i<NQ; i++){
-                    
-                    int const next_state_CL = colours[i+ll*NQ];
-                    if (next_state_CL==2) continue;
-                    
-                    if (next_state_CL != qb_value(i,ndxs[ll])) {
-                        is_zero=true;
-                        break;
-                    }
-                }
+        
+        for (int ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 ; ll--) {
+            
+            if (ll >0 && !state_it[ll].generate_next_in_sequence(state[ll]))  { // this layer overflows, reset and go to previous layer
+                state_it[ll].reset();
+                state_it[ll].generate_next_in_sequence(state[ll]) ;
+            }
+            else if (ll==0 && !state_it[0].generate_next_in_sequence(state[0]))  { // simulation finished
+                finish_simulation = true;
+                break;   // terminate iterating states
+            }
+            else {  // continue on this layer ; break out of for loop
+                break;
             }
         }
 
     } // main simulation loop (while)
+    fprintf (stderr, "Main LOOP terminated\n");
     aR = sumR;
     aI = sumI;
 
