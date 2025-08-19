@@ -302,10 +302,10 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
     while (ndxs[0] < N) {
 
         
-        fprintf (stderr, "ndxs= ");
-        for (int lll=0; lll<L-1 ; lll++)
-            fprintf (stderr, "\t%05llu", ndxs[lll]);
-        fprintf (stderr, "\n");
+        //fprintf (stderr, "ndxs= ");
+        //for (int lll=0; lll<L-1 ; lll++)
+        //    fprintf (stderr, "\t%05llu", ndxs[lll]);
+        //fprintf (stderr, "\n");
 
         float pathR = (start_layer==0? 1.f : wR[start_layer-1]);
         float pathI = (start_layer==0? 0.f : wI[start_layer-1]);

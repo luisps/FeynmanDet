@@ -7,7 +7,6 @@
 
 #include "../States.h"
 #include "../BaseFunctionalty/circuit.h"
-#include "FixedBitsSequence.hpp"
 
 void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI);
 
