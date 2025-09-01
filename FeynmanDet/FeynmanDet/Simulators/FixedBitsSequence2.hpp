@@ -19,7 +19,7 @@ private:
     StateT total_in_sequence;  // 2^nNonfixed_bits
     // which are the non fixed
     int nonfixed_bits[sizeof(StateT)];
-    int seq_ndx;  // counter of the last generated value in the seq
+    StateT seq_ndx;  // counter of the last generated value in the seq
 
     void eval_first_value (int const fixed_bits[], int const fixed_values[]) {
         first_value = 0;
@@ -62,10 +62,13 @@ public:             // Access specifier
     // true if a valid number is generated
     // false if end of sequence reached
     bool generate_next_in_sequence(StateT &value);
-    
+    // true if a valid number is generated
+    // false if this_seq_ndx of sequence is invalid
+    bool generate_this_in_sequence(StateT &value, StateT const this_seq_ndx);
+
     // to verify loop terminations
-    bool seq_finished (void) {
-        return (seq_ndx == total_in_sequence);
+    bool seq_finished (StateT const ndx) {
+        return (ndx == total_in_sequence);
     }
     
     void reset(void) {seq_ndx=0;}
