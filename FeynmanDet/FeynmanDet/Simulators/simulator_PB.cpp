@@ -342,12 +342,12 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             sumI += pathI;
             path_NZ_counter++;
             // DEBUG
-            /*
-            printf ("Non zero path: ");
-            for (int lll=0 ; lll<L-1 ; lll++) {
+            
+            //printf ("Non zero path: ");
+            /*for (int lll=0 ; lll<L-1 ; lll++) {
                 printf ("%llu ", ndxs[lll]);
-            }
-            printf ("= %e + i %e\n", pathR, pathI);*/
+            }*/
+            //printf ("= %e + i %e\n", pathR, pathI);
         }
         path_counter++;
 
@@ -366,7 +366,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             invalid_state_green = true;
             while(invalid_state_green) {
                 ndxs[ll]++;
-                if (ll==0)  fprintf (stderr, "ndxs[0] = %llu \n", ndxs[0]);
+                //if (ll==0)  fprintf (stderr, "ndxs[0] = %llu \n", ndxs[0]);
 
                 if (ndxs[ll]==N && ll>0)  { // this layer overflows
                     ndxs[ll] = 0;

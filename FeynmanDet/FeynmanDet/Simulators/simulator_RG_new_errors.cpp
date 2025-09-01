@@ -46,10 +46,8 @@ static void print_RG (colourT *states, int NQ, int L) {
 void simulate_RG_paths_new_errors (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
 
     const int L = circuit->size->num_layers;
-    // current state at each layer
-    StateT *state = new StateT[L-1];
-    // state iterators
-    FixedBitsSequence2 *state_it = new FixedBitsSequence2[L-1];
+    // state iterator for layer l=0
+    FixedBitsSequence2 state_l0_it;
     const int NQ=circuit->size->num_qubits;
     StateT path_counter=0, path_NZ_counter=0;
 
@@ -76,16 +74,10 @@ void simulate_RG_paths_new_errors (TCircuit *circuit, StateT init_state, StateT 
     colours=fs_bs_RG(circuit, init_state_arr, final_state_arr);
 
     print_RG (colours, NQ, L);
-    int start_layer=0;
 
-
-    // init the states and verify if there is a -1 in the colouring
+    // verify if there is a -1 in the colouring
     // if yes, amplitude = 0 + 0j
     for (int l = 0; l < L-1; l++) {
-        int n_fixed_bits;
-        int fixed_bits[sizeof(StateT)];
-        int fixed_values[sizeof(StateT)];
-        n_fixed_bits=0;
         for (int q = 0; q < NQ; q++) {
             colourT colour= colours[q + l*NQ];
             switch (colour) {
@@ -96,6 +88,22 @@ void simulate_RG_paths_new_errors (TCircuit *circuit, StateT init_state, StateT 
                             (unsigned long long)init_state, aR, aI);
                     return;
                     break;
+            }
+        }  // end iterate over this layer qubits
+    } // end verify invalids in the colouring
+    
+    // init the iterator for layer 0
+    // this will be controlled by a for loop
+    // to enable OpenMP
+    {
+        int const l = 0;
+        int n_fixed_bits;
+        int fixed_bits[sizeof(StateT)];
+        int fixed_values[sizeof(StateT)];
+        n_fixed_bits=0;
+        for (int q = 0; q < NQ; q++) {
+            colourT colour= colours[q + l*NQ];
+            switch (colour) {
                 case GREEN0:
                 case GREEN1:
                     fixed_bits[n_fixed_bits] = q;
@@ -105,105 +113,147 @@ void simulate_RG_paths_new_errors (TCircuit *circuit, StateT init_state, StateT 
             }
         }  // end iterate over this layer qubits
         // initialize iterator
-        state_it[l].init_iterator(NQ, n_fixed_bits, fixed_bits, fixed_values);
-    }
+        state_l0_it.init_iterator(NQ, n_fixed_bits, fixed_bits, fixed_values);
+    }  // end initialize l0 iterator
 
-    // Simulation starts
+    // current state for layer l=0
+    StateT const total_in_seq_l0 = state_l0_it.get_seq_length() ;
 
-    // all intermediate layers are placed in first in sequence
-    for (int l=0 ; l<L-1 ; l++) {
-        state_it[l].generate_next_in_sequence(state[l]) ;
-    }
-    
-    // main simulation loop
-    bool finish_simulation=false;
-    while ( ! finish_simulation)  {
+    // Start simulation : loop over states in L0
+    for (StateT l0_ndx=0 ; l0_ndx < total_in_seq_l0 ; l0_ndx++) {
 
-        //fprintf (stderr, "Main LOOP iteration\n");
-        /*
-        fprintf (stderr, "ndxs= ");
-        for (int lll=0; lll<L-1 ; lll++)
-            fprintf (stderr, "%llu ", ndxs[lll]);
-        fprintf (stderr, "\n");*/
+        // prepare iterators
+        // this is inside the loop to ensure thread private with OpenMP
+        // current state at each layer
+        StateT *state = new StateT[L-1];
+        // state iterators except l=0
+        FixedBitsSequence2 *state_it = new FixedBitsSequence2[L-1];
 
-        float pathR = (start_layer==0? 1.f : wR[start_layer-1]);
-        float pathI = (start_layer==0? 0.f : wI[start_layer-1]);
-        StateT current_state = (start_layer==0? init_state : state[start_layer-1]);
-
-        int l;
-        StateT next_state;
-        bool zero_weight_layer=false;
-        //bool is_zero=false;
+        // get state 0
+        state_l0_it.generate_this_in_sequence(state[0], l0_ndx);
         
-        // iterate over layers
-        for (l=start_layer ; l<L ; l++) {
-            float lR=1.f;
-            float lI=0.f;
-            next_state = (l< L-1 ? state[l] : final_state);
         
-            TCircuitLayer *layer = &circuit->layers[l];
-            layer_w(layer, l, current_state, next_state, lR, lI);
-            complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
-
-
-            wR[l]=pathR;
-            wI[l]=pathI;
-            if (complex_abs_square(lR, lI) <= 0.f) {
-                zero_weight_layer=true;
-                pathR = pathI = 0.f;
-                break;
-            }
-            current_state = next_state;
-
-        } // end iterating layers
-        //if  (!is_zero && !zero_weight_layer) {
-        if  (!zero_weight_layer) {
-            sumR += pathR;
-            sumI += pathI;
-            path_NZ_counter++;
+        // init the states' iterators for l>0
+        for (int l = 1; l < L-1; l++) {
+            int n_fixed_bits;
+            int fixed_bits[sizeof(StateT)];
+            int fixed_values[sizeof(StateT)];
+            n_fixed_bits=0;
+            for (int q = 0; q < NQ; q++) {
+                colourT colour= colours[q + l*NQ];
+                switch (colour) {
+                    case GREEN0:
+                    case GREEN1:
+                        fixed_bits[n_fixed_bits] = q;
+                        fixed_values[n_fixed_bits] = colour;
+                        n_fixed_bits++;
+                        break;
+                }
+            }  // end iterate over this layer qubits
+            // initialize iterator
+            state_it[l].init_iterator(NQ, n_fixed_bits, fixed_bits, fixed_values);
+            // set the layer state to the first in sequence
+            state_it[l].generate_next_in_sequence(state[l]) ;
+        } // finish initializing state iterators
+        
+        // Simulation starts
+        int start_layer=0;
+        
+        // main simulation loop for l>0
+        bool finish_simulation=false;
+        while ( ! finish_simulation)  {
             
-            // DEBUG
-            /*printf ("Non zero path: ");
-            for (int lll=0 ; lll<L-1 ; lll++) {
-                printf ("%llu ", state[lll]);
-            }
-            printf ("= %e + i %e\n", pathR, pathI);*/
-
-        }
-        path_counter++;
-
-        // compute next path
-        // updating ndxs[]
-        
-        // all paths
-        /*int ll;
-        //for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 ; ll--) {
-        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 ; ll--) {
-            ndxs[ll]++;
-            start_layer=ll;
-            if (ndxs[ll]==N && ll>0)  { 
-                ndxs[ll] = 0;
-            }
-            else
-                break;
-        }*/
-        
-        for (int ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 ; ll--) {
             
-            if (ll >0 && !state_it[ll].generate_next_in_sequence(state[ll]))  { // this layer overflows, reset and go to previous layer
-                state_it[ll].reset();
-                state_it[ll].generate_next_in_sequence(state[ll]) ;
+            //fprintf (stderr, "Main LOOP iteration\n");
+            /*
+             fprintf (stderr, "ndxs= ");
+             for (int lll=0; lll<L-1 ; lll++)
+             fprintf (stderr, "%llu ", ndxs[lll]);
+             fprintf (stderr, "\n");*/
+            
+            float pathR = (start_layer==0? 1.f : wR[start_layer-1]);
+            float pathI = (start_layer==0? 0.f : wI[start_layer-1]);
+            StateT current_state = (start_layer==0? init_state : state[start_layer-1]);
+            
+            int l;
+            StateT next_state;
+            bool zero_weight_layer=false;
+            //bool is_zero=false;
+            
+            // iterate over layers
+            for (l=start_layer ; l<L ; l++) {
+                float lR=1.f;
+                float lI=0.f;
+                next_state = (l< L-1 ? state[l] : final_state);
+                
+                TCircuitLayer *layer = &circuit->layers[l];
+                layer_w(layer, l, current_state, next_state, lR, lI);
+                complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
+                
+                
+                wR[l]=pathR;
+                wI[l]=pathI;
+                if (complex_abs_square(lR, lI) <= 0.f) {
+                    zero_weight_layer=true;
+                    pathR = pathI = 0.f;
+                    break;
+                }
+                current_state = next_state;
+                
+            } // end iterating layers
+            //if  (!is_zero && !zero_weight_layer) {
+            if  (!zero_weight_layer) {
+                sumR += pathR;
+                sumI += pathI;
+                path_NZ_counter++;
+                
+                // DEBUG
+                /*printf ("Non zero path: ");
+                 for (int lll=0 ; lll<L-1 ; lll++) {
+                 printf ("%llu ", state[lll]);
+                 }
+                 printf ("= %e + i %e\n", pathR, pathI);*/
+                
             }
-            else if (ll==0 && !state_it[0].generate_next_in_sequence(state[0]))  { // simulation finished
-                finish_simulation = true;
-                break;   // terminate iterating states
+            path_counter++;
+            
+            // compute next path
+            // updating ndxs[]
+            
+            // all paths
+            /*int ll;
+             //for (ll=(((is_zero || zero_weight_layer) && l<(L-1))? l : L-2); ll>=0 ; ll--) {
+             for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=0 ; ll--) {
+             ndxs[ll]++;
+             start_layer=ll;
+             if (ndxs[ll]==N && ll>0)  {
+             ndxs[ll] = 0;
+             }
+             else
+             break;
+             }*/
+            
+            for (int ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>0 ; ll--) {
+                
+                if (ll >1 && !state_it[ll].generate_next_in_sequence(state[ll]))  { // this layer overflows, reset and go to previous layer
+                    state_it[ll].reset();
+                    state_it[ll].generate_next_in_sequence(state[ll]) ;
+                }
+                else if (ll==1 && !state_it[1].generate_next_in_sequence(state[1]))  { // simulation finished
+                    finish_simulation = true;
+                    break;   // terminate iterating states
+                }
+                else {  // continue on this layer ; break out of for loop
+                    break;
+                }
             }
-            else {  // continue on this layer ; break out of for loop
-                break;
-            }
-        }
+            
+        } // main simulation loop (while)
+        
+        delete [] state;
+        delete [] state_it;
 
-    } // main simulation loop (while)
+    }  // Layer 0 for loop
     fprintf (stderr, "Main LOOP terminated\n");
     aR = sumR;
     aI = sumI;
