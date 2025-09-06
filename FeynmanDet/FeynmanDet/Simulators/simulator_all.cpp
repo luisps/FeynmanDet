@@ -43,10 +43,19 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         int const n_cores = omp_get_num_procs();
         n_threads = (N>n_cores ? n_cores : N);
     }
-    fprintf (stdout, "OpenMP: %d threads\n", n_threads);
+    fprintf (stderr, "OpenMP: %d threads required\n", n_threads);
 #pragma omp parallel num_threads(n_threads) proc_bind(spread)
-#endif
     {
+#pragma omp single nowait
+	    {
+    	fprintf (stderr, "OpenMP: thread %d reports %d threads\n", omp_get_thread_num(), omp_get_num_threads());
+    	fflush (stderr);
+	    }
+#else
+    {
+    	fprintf (stderr, "OpenMP NOT IDENTIFIED\n");
+    	fflush (stderr);
+#endif
         StateT path_counterL=0, path_NZ_counterL=0;
         // main loop
         StateT ndxs0;
@@ -59,6 +68,8 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_OPENMP)
             clock_t start, end;
             start=clock();
+	    fprintf (stderr, "Thread %d with ndxs0=%llu\n", omp_get_thread_num(), ndxs0);
+	    fflush(stderr);
 #endif
             // all intermediate layers indexes to 0
             // except intermediate layer 0
