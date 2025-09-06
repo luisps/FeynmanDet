@@ -64,7 +64,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         double start, end;
         start=omp_get_wtime();
 //#pragma omp for schedule(dynamic,1)
-#pragma omp for 
+#pragma omp for schedule(dynamic)
 #endif
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
 
