@@ -6,6 +6,7 @@
 //  Created by Luis Paulo Santos and Vitoria Sousa on 04/12/2023.
 //
 #include <iostream>
+#include <chrono>
 #include <stdlib.h>
 #include "BaseFunctionalty/circuit.h"
 #include "Simulators/simulator_RG.hpp"
@@ -22,7 +23,7 @@
 int n_threads=-1;
 
 int main(int argc, char *argv[]) {
-
+    
     char fileName[256];
     int algorithm = 1, fs_int=0;
     
@@ -33,7 +34,7 @@ int main(int argc, char *argv[]) {
         fprintf (stderr, "\talg=2 - PINK BLUE\n");
         fprintf (stderr, "\n");
     }
-
+    
     if (argc>=2) { // get circuit name
         snprintf (fileName, 255, "circuits/circuit_%s.data", argv[1]);
     }
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]) {
     if (argc>=5) {
         n_threads = atoi(argv[4]);
     }
-
+    
 #if defined(_OPENMP)
     fprintf(stderr, "OpenMP enabled: %d cores.\n", omp_get_num_procs());
 #endif
@@ -74,7 +75,7 @@ int main(int argc, char *argv[]) {
         case 3:
             fprintf (stdout, "RG_PATHS (new: has errors)\n");
             break;
-
+            
         default:
             fprintf (stdout, "UNKNOWN ALGORITHM. Default = RG_PATHS\n");
             algorithm = 1;
@@ -87,7 +88,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "ERROR: unable to load circuit from file %s!\n", fileName);
         return 0;
     }
- 
+    
     
     const int L = circuit->size->num_layers;
     printf("L= %d \n", L);
@@ -102,43 +103,41 @@ int main(int argc, char *argv[]) {
     printf("N= %llu \n", N);
     
     //print_circuit(circuit);
-    //for (fs=0 ; fs < N ; fs++) {
-        clock_t start, end;
-        start=clock();
-
-
-        StateT init_state = 0;
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    
+    StateT init_state = 0;
     StateT final_state= (StateT) fs_int;
-        float aR=0;
-        float aI=0;
-        
-        switch (algorithm) {
-            case 0:
-                simulate_all_paths(circuit, init_state, final_state, aR, aI);
-                break;
-            case 1:
-                simulate_RG_paths(circuit, init_state, final_state, aR, aI);
-                break;
-            case 2:
-                simulate_PB_paths(circuit, init_state, final_state, aR, aI);
-                break;
-            case 3:
-                simulate_RG_paths_new_errors(circuit, init_state, final_state, aR, aI);
-                break;
-
-            default:
-                break;
-        }
-        
-        end=clock();
-        double time_taken=double(end - start)/double(CLOCKS_PER_SEC);
-        printf("Time taken is: %lf secs\n", time_taken);
-    //}
+    float aR=0;
+    float aI=0;
+    
+    switch (algorithm) {
+        case 0:
+            simulate_all_paths(circuit, init_state, final_state, aR, aI);
+            break;
+        case 1:
+            simulate_RG_paths(circuit, init_state, final_state, aR, aI);
+            break;
+        case 2:
+            simulate_PB_paths(circuit, init_state, final_state, aR, aI);
+            break;
+        case 3:
+            simulate_RG_paths_new_errors(circuit, init_state, final_state, aR, aI);
+            break;
+            
+        default:
+            break;
+    }
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    double time_taken=(double) (std::chrono::duration<double, std::milli>(end - start)).count();
+    printf("Time taken is: %lf mili secs\n", time_taken);
+    
     // Free the allocated memory
     free(circuit->size);
     free(circuit->layers);
     free(circuit);
-
+    
     printf("\n");
     return 0;
 }

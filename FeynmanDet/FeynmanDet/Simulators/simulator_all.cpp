@@ -68,8 +68,8 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_OPENMP)
             clock_t start, end;
             start=clock();
-	    fprintf (stderr, "Thread %d with ndxs0=%llu\n", omp_get_thread_num(), ndxs0);
-	    fflush(stderr);
+	    //fprintf (stderr, "Thread %d with ndxs0=%llu\n", omp_get_thread_num(), ndxs0);
+	    //fflush(stderr);
 #endif
             // all intermediate layers indexes to 0
             // except intermediate layer 0
