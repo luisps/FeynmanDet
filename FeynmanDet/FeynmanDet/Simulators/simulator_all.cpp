@@ -187,7 +187,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_OPENMP)
         end=omp_get_wtime();
         double time_taken=double(end - start)*1000.F;
-        printf ("Thread %d: %llu evaluated paths, %llu non zero (%lf mili secs), n_tasks=%d\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, time_taken, n_tasks);
+        printf ("Thread %d: %llu evaluated paths, %llu non zero (%.2lf mili secs), n_tasks=%d\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, time_taken, n_tasks);
 
 #endif
          */
