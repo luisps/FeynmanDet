@@ -63,10 +63,14 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_OPENMP)
         double start, end;
         start=omp_get_wtime();
-//#pragma omp for schedule(dynamic,1)
-#pragma omp for schedule(guided)
+        int n_tasks=0;
+#pragma omp for schedule(dynamic)
 #endif
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
+
+#if defined(_OPENMP)
+            n_tasks++;
+#endif
 
             // all intermediate layers indexes to 0
             // except intermediate layer 0
@@ -182,7 +186,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_OPENMP)
         end=omp_get_wtime();
         double time_taken=double(end - start)*1000.F;
-        printf ("Thread %d: %llu evaluated paths, %llu non zero (%lf mili secs)\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, time_taken);
+        printf ("Thread %d: %llu evaluated paths, %llu non zero (%lf mili secs), n_tasks=%d\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, time_taken, n_tasks);
 
 #endif
     } // end omp parallel
