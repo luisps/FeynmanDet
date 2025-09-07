@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
     
     auto end = std::chrono::high_resolution_clock::now();
     double time_taken=(double) (std::chrono::duration<double, std::milli>(end - start)).count();
-    printf("Time taken is: %lf mili secs\n", time_taken);
+    printf("Time taken is: %.2lf mili secs\n", time_taken);
     
     // Free the allocated memory
     free(circuit->size);
