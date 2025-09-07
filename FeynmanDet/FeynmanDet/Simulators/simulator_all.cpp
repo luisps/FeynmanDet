@@ -70,7 +70,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         double start, end;
         start=omp_get_wtime();
         int n_tasks=0;
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic) collapse(2)
 #endif
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
             for (ndxs1 = 0 ; ndxs1 < N ; ndxs1++) {
