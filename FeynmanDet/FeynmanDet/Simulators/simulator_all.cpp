@@ -104,7 +104,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 TCircuitLayer *layer = &circuit->layers[0];
                 layer_w(layer, 0, init_state, ndxs0, lR, lI);
                 if (complex_abs_square(lR, lI) <= 0.f) {
-                    break;  // breaks from ndxs1 loop, iterating ndxs0 loop
+                    continue;  // iterates ndxs1 loop, which is a waste
                 }
                 wR[0]=pathR = lR;
                 wI[0]=pathI = lI;
