@@ -46,21 +46,22 @@ static void print_RG (colourT *states, int NQ, int L) {
 void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
 
     const int L = circuit->size->num_layers;
-    StateT *ndxs = new StateT[L-1];
     const int NQ=circuit->size->num_qubits;
     const StateT N = 1 << NQ;
     StateT path_counter=0, path_NZ_counter=0;
+    
+    if (L<4) { // 4 layers are required
+        fprintf (stderr, "The circuit has %d layers: 4 is the minimum!\n", L);
+        return ;
+    }
 
-    float* wR=new float[L-1];
-    float* wI=new float[L-1];
-
-
+    // Colouring
     int init_state_arr[NQ];
     int final_state_arr[NQ];
     float sumR=0.f, sumI=0.f;
     for (int i=0; i<NQ; i++){
         init_state_arr[i]=qb_value(i,init_state);
-        final_state_arr[i]=qb_value(i,final_state);	
+        final_state_arr[i]=qb_value(i,final_state);
     }
 
     // Do the colouring
@@ -74,7 +75,6 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
     colours=fs_bs_RG(circuit, init_state_arr, final_state_arr);
 
     print_RG (colours, NQ, L);
-    int start_layer=0;
 
     // verify if there is a -1 in the colouring
     // if yes, amplitude = 0 + 0j
@@ -89,6 +89,13 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
     }
 
     // Simulation starts
+    StateT *ndxs = new StateT[L-1];
+
+    float* wR=new float[L-1];
+    float* wI=new float[L-1];
+
+
+    int start_layer=0;
 
     // all intermediate layers indexes to 0
     for (int i=0 ; i<L-1 ; i++) ndxs[i]=0 ;
