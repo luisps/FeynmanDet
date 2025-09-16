@@ -79,7 +79,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 
         float sumR=0.f, sumI=0.f;
 #if defined(_OPENMP)
-#define _COLLAPSE2
+//#define _COLLAPSE2
 #if defined(_COLLAPSE2)
         StateT ndxs1;
 #endif
