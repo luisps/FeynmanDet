@@ -70,17 +70,33 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         StateT path_counterL=0, path_NZ_counterL=0;
         // explicitly include up to 2 for loops
         // for parallel execution by OpenMP
-        StateT ndxs0, ndxs1;
+        
+        // We will be using openMP parallel for
+        // and eventually collapsing 2 (two) for loops
+        // The next pre-processor constant tells us whetehr or not
+        // to collapse
+        StateT ndxs0;
+
         float sumR=0.f, sumI=0.f;
 #if defined(_OPENMP)
+#define _COLLAPSE2
+#if defined(_COLLAPSE2)
+        StateT ndxs1;
+#endif
         double start, end;
         start=omp_get_wtime();
         int n_tasks=0;
+#if defined(_COLLAPSE2)
 #pragma omp for schedule(dynamic) collapse(2)
-#endif
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
             for (ndxs1 = 0 ; ndxs1 < N ; ndxs1++) {
-                
+#else
+#pragma omp for schedule(dynamic)
+        for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
+#endif
+#else
+        for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
+#endif
                 
 #if defined(_OPENMP)
                 n_tasks++;
@@ -95,9 +111,11 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 // this is only for reading
                 // all writes must be made to ndxs0
                 ndxs[0] = ndxs0;
+#if defined(_COLLAPSE2)
                 ndxs[1] = ndxs1;
+#endif
                 for (int i=2 ; i<L-1 ; i++) ndxs[i]=0 ;
-                
+                    
                 float wR[L-1], wI[L-1];
                 
                 float pathR = 1.f;
@@ -121,6 +139,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                     wR[0]=pathR = lR;
                     wI[0]=pathI = lI;
                     
+#if defined(_COLLAPSE2)
                     // early termination if the amplitude
                     // from ndxs[0] to ndxs[1] is zero
                     lR=1.f; lI=0.f;
@@ -132,10 +151,16 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                     complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
                     wR[1]=pathR;
                     wI[1]=pathI;
+#endif
+#if defined(_COLLAPSE2)
+            int const Collapsed_loops=2;
+#else
+            int const Collapsed_loops=1;
+#endif
+
+                    int start_layer=Collapsed_loops;
                     
-                    int start_layer=2;
-                    
-                while (ndxs[2] < N) {
+                while (ndxs[Collapsed_loops] < N) {
                     
                     /*
                      fprintf (stderr, "ndxs= ");
@@ -193,20 +218,22 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                     // if l==0 (0 amplitude in the first layer)
                     // break off from the while loop
                     // (to iterate over ndxs1)
-                    if (l==1) break;
-                    // updating ndxs[2..L-2]
+                    if (l==Collapsed_loops-1) break;
+                    // updating ndxs[Collapsed_loops..L-2]
                     int ll;
-                    for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>1 ; ll--) {
+                    for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=Collapsed_loops ; ll--) {
                         ndxs[ll]++;
                         start_layer=ll;
-                        if (ndxs[ll]==N && ll>2)  {
+                        if (ndxs[ll]==N && ll>Collapsed_loops)  {
                             ndxs[ll] = 0;
                         }
                         else
                             break;
                     }
                 } // main simulation loop (while)
+#if defined(_COLLAPSE2)
             }  // main simulation loop (ndxs1 and omp for)
+#endif
         }  // main simulation loop (ndxs0 and omp for)
 #if defined(_OPENMP)
 #pragma omp atomic
