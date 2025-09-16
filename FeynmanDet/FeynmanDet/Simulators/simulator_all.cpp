@@ -184,7 +184,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                     if (!zero_weight_layer) {
                         path_NZ_counterL++;
 
-                        fprintf (stderr, "(T%d) - %llu th NZ path (%llu -> %llu -> %llu ...\n", threadID, path_NZ_counterL, init_state, ndxs0, ndxs1);
+                        //fprintf (stderr, "(T%d) - %llu th NZ path (%llu -> %llu -> %llu ...\n", threadID, path_NZ_counterL, init_state, ndxs0, ndxs1);
                         //fflush (stderr);
 
                         
