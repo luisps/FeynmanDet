@@ -30,7 +30,10 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
     }
 
     double const total_paths = pow(2.F, (double)(NQ*(L-1)));
-    printf ("%le existing paths\n", total_paths);
+    fprintf (stdout, "%le existing paths\n", total_paths);
+    
+    fflush(stderr);
+    fflush(stdout);
     
     /*int init_state_arr[NQ];
     int final_state_arr[NQ];
@@ -51,13 +54,16 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
     fprintf (stderr, "OpenMP: %d threads required\n", n_threads);
 #pragma omp parallel num_threads(n_threads) proc_bind(spread)
     {
+        int const threadID = omp_get_thread_num();
+        
 #pragma omp single nowait
 	    {
-    	fprintf (stderr, "OpenMP: thread %d reports %d threads\n", omp_get_thread_num(), omp_get_num_threads());
+    	fprintf (stderr, "OpenMP: thread %d reports %d threads\n", threadID, omp_get_num_threads());
     	fflush (stderr);
 	    }
 #else
     {
+        int const threadID = -1;
     	fprintf (stderr, "OpenMP NOT IDENTIFIED\n");
     	fflush (stderr);
 #endif
@@ -108,7 +114,10 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 // only proceed with this iteration
                 // which in fact is a pair (ndxs0,ndxs1)
                 // if the amplitude wasn't zero
-                if (complex_abs_square(lR, lI) > 0.f) {
+                if (complex_abs_square(lR, lI) <= 0.f) {
+                    continue;
+                }
+                
                     wR[0]=pathR = lR;
                     wI[0]=pathI = lI;
                     
@@ -126,72 +135,77 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                     
                     int start_layer=2;
                     
-                    while (ndxs[2] < N) {
+                while (ndxs[2] < N) {
+                    
+                    /*
+                     fprintf (stderr, "ndxs= ");
+                     fprintf (stderr, "%llu ", ndxs0);
+                     for (int lll=1; lll<L-1 ; lll++)
+                     fprintf (stderr, "%llu ", ndxs[lll]);
+                     fprintf (stderr, "\n");*/
+                    
+                    pathR = (start_layer==0? 1.f : wR[start_layer-1]);
+                    pathI = (start_layer==0? 0.f : wI[start_layer-1]);
+                    StateT current_state = (start_layer==0? init_state : ndxs[start_layer-1]);
+                    
+                    int l;
+                    StateT next_state;
+                    bool zero_weight_layer=false;
+                    
+                    // iterate over layers
+                    for (l=start_layer ; l<L ; l++) {
+                        lR=1.f; lI=0.f;
+                        next_state = (l< L-1 ? ndxs[l] : final_state);
                         
-                        /*
-                         fprintf (stderr, "ndxs= ");
-                         fprintf (stderr, "%llu ", ndxs0);
-                         for (int lll=1; lll<L-1 ; lll++)
-                         fprintf (stderr, "%llu ", ndxs[lll]);
-                         fprintf (stderr, "\n");*/
+                        layer = &circuit->layers[l];
+                        layer_w(layer, l, current_state, next_state, lR, lI);
+                        complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
                         
-                        pathR = (start_layer==0? 1.f : wR[start_layer-1]);
-                        pathI = (start_layer==0? 0.f : wI[start_layer-1]);
-                        StateT current_state = (start_layer==0? init_state : ndxs[start_layer-1]);
                         
-                        int l;
-                        StateT next_state;
-                        bool zero_weight_layer=false;
-                        
-                        // iterate over layers
-                        for (l=start_layer ; l<L ; l++) {
-                            lR=1.f; lI=0.f;
-                            next_state = (l< L-1 ? ndxs[l] : final_state);
-                            
-                            layer = &circuit->layers[l];
-                            layer_w(layer, l, current_state, next_state, lR, lI);
-                            complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
-                            
-                            
-                            wR[l]=pathR;
-                            wI[l]=pathI;
-                            if (complex_abs_square(lR, lI) <= 0.f) {
-                                zero_weight_layer=true;
-                                pathR = pathI = 0.f;
-                                break;
-                            }
-                            current_state = next_state;
+                        wR[l]=pathR;
+                        wI[l]=pathI;
+                        if (complex_abs_square(lR, lI) <= 0.f) {
+                            zero_weight_layer=true;
+                            pathR = pathI = 0.f;
+                            break;
                         }
+                        current_state = next_state;
+                    }
+                    
+                    if (!zero_weight_layer) {
+                        sumR += pathR;
+                        sumI += pathI;
                         
-                        if (!zero_weight_layer) {
-                            sumR += pathR;
-                            sumI += pathI;
-                            
-                        }
-                        path_counterL++;
-                        /*if (!(path_counter & 0x00FFFFF)) {
-                         fprintf(stderr, "\rpath_counter=%llu", path_counter);
-                         }*/
-                        if (!zero_weight_layer) path_NZ_counterL++;
+                    }
+                    path_counterL++;
+                    /*if (!(path_counter & 0x00FFFFF)) {
+                     fprintf(stderr, "\rpath_counter=%llu", path_counter);
+                     }*/
+                    if (!zero_weight_layer) {
+                        path_NZ_counterL++;
+
+                        fprintf (stderr, "(T%d) - %llu th NZ path (%llu -> %llu -> %llu ...\n", threadID, path_NZ_counterL, init_state, ndxs0, ndxs1);
+                        fflush (stderr);
+
                         
-                        // compute next path
-                        // if l==0 (0 amplitude in the first layer)
-                        // break off from the while loop
-                        // (to iterate over ndxs1)
-                        if (l==1) break;
-                        // updating ndxs[2..L-2]
-                        int ll;
-                        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>1 ; ll--) {
-                            ndxs[ll]++;
-                            start_layer=ll;
-                            if (ndxs[ll]==N && ll>2)  {
-                                ndxs[ll] = 0;
-                            }
-                            else
-                                break;
+                    }
+                    // compute next path
+                    // if l==0 (0 amplitude in the first layer)
+                    // break off from the while loop
+                    // (to iterate over ndxs1)
+                    if (l==1) break;
+                    // updating ndxs[2..L-2]
+                    int ll;
+                    for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>1 ; ll--) {
+                        ndxs[ll]++;
+                        start_layer=ll;
+                        if (ndxs[ll]==N && ll>2)  {
+                            ndxs[ll] = 0;
                         }
-                    } // main simulation loop (while)
-                }  // verification of whether lw (init->ndxs0)==0
+                        else
+                            break;
+                    }
+                } // main simulation loop (while)
             }  // main simulation loop (ndxs1 and omp for)
         }  // main simulation loop (ndxs0 and omp for)
 #if defined(_OPENMP)
