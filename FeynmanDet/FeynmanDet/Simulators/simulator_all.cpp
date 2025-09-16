@@ -114,7 +114,12 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_COLLAPSE2)
                 ndxs[1] = ndxs1;
 #endif
-                for (int i=2 ; i<L-1 ; i++) ndxs[i]=0 ;
+#if defined(_COLLAPSE2)
+            int const Collapsed_loops=2;
+#else
+            int const Collapsed_loops=1;
+#endif
+            for (int i=Collapsed_loops ; i<L-1 ; i++) ndxs[i]=0 ;
                     
                 float wR[L-1], wI[L-1];
                 
@@ -151,11 +156,6 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                     complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
                     wR[1]=pathR;
                     wI[1]=pathI;
-#endif
-#if defined(_COLLAPSE2)
-            int const Collapsed_loops=2;
-#else
-            int const Collapsed_loops=1;
 #endif
 
                     int start_layer=Collapsed_loops;
