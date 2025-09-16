@@ -185,7 +185,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                         path_NZ_counterL++;
 
                         fprintf (stderr, "(T%d) - %llu th NZ path (%llu -> %llu -> %llu ...\n", threadID, path_NZ_counterL, init_state, ndxs0, ndxs1);
-                        fflush (stderr);
+                        //fflush (stderr);
 
                         
                     }
