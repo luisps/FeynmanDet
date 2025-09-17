@@ -35,12 +35,6 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
     fflush(stderr);
     fflush(stdout);
     
-    /*int init_state_arr[NQ];
-    int final_state_arr[NQ];
-    for (int i=0; i<NQ; i++){
-        init_state_arr[i]=qb_value(i,init_state);
-        final_state_arr[i]=qb_value(i,final_state);	
-    }*/
     aR = aI = 0.f;
 
     // Simulation starts
@@ -200,7 +194,6 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                     if (!zero_weight_layer) {
                         sumR += pathR;
                         sumI += pathI;
-                        
                     }
                     path_counterL++;
                     /*if (!(path_counter & 0x00FFFFF)) {

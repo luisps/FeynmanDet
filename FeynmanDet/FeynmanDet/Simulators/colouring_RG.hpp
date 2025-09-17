@@ -10,5 +10,4 @@
 
 colourT* fs_bs_RG(TCircuit *circuit, int* init_state_arr,  int* final_state_arr);
 
-
 #endif
