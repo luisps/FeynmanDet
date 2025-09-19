@@ -93,22 +93,24 @@ void printBits(size_t const size, void const * const ptr)
 }
 
 // verify whether this state is allowed by colouring
-bool validate_PB (StateT const state, StateT const prev_state, int const *const colours, int const NQ) {
-    bool valid = true;
+// return:  the index of the violating qubit
+//          -1 if valid
+int validate_PB (StateT const state, StateT const prev_state, int const *const colours, int const NQ) {
+    int invalid = -1;
 
     
-    for (int i=0; i<NQ && valid ; i++){
+    for (int i=0; i<NQ && invalid==-1 ; i++){
         int const next_state_CL = colours[i];
         
         if (next_state_CL== GREEN0 || next_state_CL== GREEN1) {
             if (next_state_CL != qb_value(i,state)) {
-                valid = false; // break from inner loop
+                invalid = i; // break from inner loop
             }
         }
         else if (next_state_CL == BLUE_I || next_state_CL == BLUE_X) {
             int const pred_qb_value = (next_state_CL == BLUE_I ? qb_value(i,prev_state) : !qb_value(i,prev_state));
             if (pred_qb_value != qb_value(i,state)) {
-                valid=false;
+                invalid=i;
             }
         }
         /*else if (next_state_CL == BLUE) {
@@ -124,12 +126,12 @@ bool validate_PB (StateT const state, StateT const prev_state, int const *const 
             int const c_qb_v = qb_value(c_qb, prev_state);
             int const pred_qb_value = (c_qb_v == 0 ? qb_value(i,prev_state) : !qb_value(i,prev_state));
             if (pred_qb_value != qb_value(i,state)) {
-                valid = false;
+                invalid = i;
             }
         }
 
     } // for to verify qubits and green
-    return valid;
+    return invalid;
 }
 
 void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
@@ -274,7 +276,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                         
                         // We have to validate whether ndxs0 is a valid state
                         // given the colouring
-                        if(!validate_PB (ndxs0, init_state, &colours[0*NQ], NQ)){
+                        if(validate_PB (ndxs0, init_state, &colours[0*NQ], NQ) != -1){
                             
                             continue;  // if not valid and _COLLAPSE2 skip to next ndxs1
                             // very unfortunate
@@ -300,7 +302,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #if defined(_COLLAPSE2)
                         // We have to validate whether ndxs1 is a valid state
                         // given the colouring
-                        if(!validate_PB (ndxs1, ndxs0, &colours[1*NQ], NQ)){
+                        if(validate_PB (ndxs1, ndxs0, &colours[1*NQ], NQ) != -1){
                             
                             continue;  // if not valid and _COLLAPSE2 skip to next ndxs1
                         }
@@ -375,15 +377,15 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                             
                             // compute next path skipping invalid GREENs and fixed BLUEs
                             int ll;
-                            bool invalid_state_green = true;
-                            for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=Collapsed_loops && invalid_state_green ; ll--) {
+                            int invalid_state_qb = 0;  // -1 means valid
+                            for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=Collapsed_loops && invalid_state_qb != -1 ; ll--) {
                                 
                                 //printf ("change ndxs[%d]=%llu\n", ll, ndxs[ll]);
                                 // get the state from the previous layer. Will need it
                                 StateT const prev_state = (ll==0 ? init_state : ndxs[ll-1]);
                                 
-                                invalid_state_green = true;
-                                while(invalid_state_green) {
+                                invalid_state_qb = 0;   // -1 is valid
+                                while(invalid_state_qb != -1) {
                                     ndxs[ll]++;
                                     //if (ll==0)  fprintf (stderr, "ndxs[0] = %llu \n", ndxs[0]);
                                     
@@ -392,17 +394,17 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                                         break;        // break only from inner loop
                                     }
                                     else if (ndxs[Collapsed_loops]==N && ll==Collapsed_loops)  { // back to for loops
-                                        invalid_state_green = false; // terminate outer loop
+                                        invalid_state_green = -1; // terminate outer loop
                                         break;   // terminate inner loop
                                     }
                                     start_layer=ll;
                                     //printf ("changed ndxs[%d]=%llu (ndxs[0] = %llu) \n", ll, ndxs[ll], ndxs[0]);
                                     
                                     // verify whether this ndxs complies with the colouring
-                                    invalid_state_green = !validate_PB(ndxs[ll], prev_state, &colours[ll*NQ], NQ);
-                                    /*if (invalid_state_green) { // need to know invalid bit index
-                                     ndxs[ll] |= ((1 << i)- 1) ; // skip all  intermediate non valid states
-                                     }*/
+                                    invalid_state_qb = validate_PB(ndxs[ll], prev_state, &colours[ll*NQ], NQ);
+                                    if (invalid_state_qb != -1) { // need to know invalid bit index
+                                     ndxs[ll] |= ((1 << invalid_state_qb)- 1) ; // skip all  intermediate non valid states
+                                     }
                                     
                                 }  // while (invalid_state_green)
                                 //printf ("END FOR LOOP ndxs[%d]=%llu\n", ll, ndxs[ll]);
