@@ -292,6 +292,11 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                                 current_state = next_state;
                                 
                             } // end iterating layers
+                            fprintf (stderr, "\tP (end iterate l)= ");
+                            for (int lll=0; lll<(L-1); lll++) {
+                                fprintf (stderr, "s[%d] = %llu ", lll, ndxs[lll]);
+                            }
+                            fprintf (stderr, "\n");
                             if  (!zero_weight_layer) {
                                 sumR += pathR;
                                 sumI += pathI;
