@@ -10,6 +10,6 @@
 
 void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI);
 
-bool validate_RG (StateT const state, int const *const colours, int const NQ);
+int validate_RG (StateT const state, int const *const colours, int const NQ);
 
 #endif
