@@ -309,7 +309,13 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                             if (l==(Collapsed_loops-1)) break;
                             // updating ndxs[Collapsed_loops..L-2]
                             // compute next path skipping invalid GREENs
-                            
+
+                            fprintf (stderr, "\tP (before updates)= ");
+                            for (int lll=0; lll<(L-1); lll++) {
+                                fprintf (stderr, "s[%d] = %llu ", lll, ndxs[lll]);
+                            }
+                            fprintf (stderr, "\n");
+
                             int ll;
                             int invalid_state_qb = 0;  // -1 is valid
                             for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=Collapsed_loops && invalid_state_qb != -1 ; ll--) {
