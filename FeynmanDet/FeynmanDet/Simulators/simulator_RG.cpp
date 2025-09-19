@@ -193,14 +193,14 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #else
                         int const Collapsed_loops=0;
 #endif
-                        fprintf(stderr, "Collapsed_loops=%d\n", Collapsed_loops);
+                        //fprintf(stderr, "Collapsed_loops=%d\n", Collapsed_loops);
                         for (int i=Collapsed_loops ; i<L-1 ; i++) ndxs[i]=0 ;
                         
-                        fprintf (stderr, "\tinitial P = ");
+                        /*fprintf (stderr, "\tinitial P = ");
                         for (int lll=0; lll<(L-1); lll++) {
                             fprintf (stderr, "s[%d] = %llu ", lll, ndxs[lll]);
                         }
-                        fprintf (stderr, "\n");
+                        fprintf (stderr, "\n");*/
 
                         float wR[L], wI[L];
                         
@@ -270,11 +270,11 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                             
                             // iterate over layers
                             for (l=start_layer ; l<L ; l++) {
-                                fprintf (stderr, "\tP (iterate l=%d)= ", l);
+                                /*fprintf (stderr, "\tP (iterate l=%d)= ", l);
                                 for (int lll=0; lll<(L-1); lll++) {
                                     fprintf (stderr, "s[%d] = %llu ", lll, ndxs[lll]);
                                 }
-                                fprintf (stderr, "\n");
+                                fprintf (stderr, "\n");*/
                                 lR=1.f; lI=0.f;
                                 next_state = (l< L-1 ? ndxs[l] : final_state);
                                 
@@ -292,11 +292,11 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                                 current_state = next_state;
                                 
                             } // end iterating layers
-                            fprintf (stderr, "\tP (end iterate l)= ");
+                            /*fprintf (stderr, "\tP (end iterate l)= ");
                             for (int lll=0; lll<(L-1); lll++) {
                                 fprintf (stderr, "s[%d] = %llu ", lll, ndxs[lll]);
                             }
-                            fprintf (stderr, "\n");
+                            fprintf (stderr, "\n");*/
                             if  (!zero_weight_layer) {
                                 sumR += pathR;
                                 sumI += pathI;
@@ -320,48 +320,48 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                             // updating ndxs[Collapsed_loops..L-2]
                             // compute next path skipping invalid GREENs
 
-                            fprintf (stderr, "\tP (before updates)= ");
+                            /*fprintf (stderr, "\tP (before updates)= ");
                             for (int lll=0; lll<(L-1); lll++) {
                                 fprintf (stderr, "s[%d] = %llu ", lll, ndxs[lll]);
                             }
-                            fprintf (stderr, "\n");
+                            fprintf (stderr, "\n");*/
 
                             int ll;
                             int invalid_state_qb = 0;  // -1 is valid
                             for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=Collapsed_loops && invalid_state_qb != -1 ; ll--) {
                                 
-                                fprintf (stderr, "ll= %d\n\tUpdating ndxs[%d] from %llu\n", ll, ll, ndxs[ll]);
+                                /*fprintf (stderr, "ll= %d\n\tUpdating ndxs[%d] from %llu\n", ll, ll, ndxs[ll]);
                                 fprintf (stderr, "\tP = ");
                                 for (int lll=0; lll<(L-1); lll++) {
                                     fprintf (stderr, "s[%d] = %llu ", lll, ndxs[lll]);
                                 }
-                                fprintf (stderr, "\n");
+                                fprintf (stderr, "\n");*/
                                 
                                 invalid_state_qb = 0;  // -1 is valid
                                 while(invalid_state_qb!=-1) {
                                     ndxs[ll]++;
                                     if (ndxs[ll]==N && ll>Collapsed_loops)  { // this layer overflows
                                         ndxs[ll] = 0;
-                                        fprintf (stderr, "\tll= %d Breaking loop to go to ll=%d\n", ll, ll);
+                                        //fprintf (stderr, "\tll= %d Breaking loop to go to ll=%d\n", ll, ll);
                                         break;        // break only from inner loop
                                     }
                                     else if (ndxs[Collapsed_loops]==N && ll==Collapsed_loops)  { // back to for loops
                                         invalid_state_qb = -1; // terminate outer loop
-                                        fprintf (stderr, "\tll= %d Breaking loop an finishing because ndxs[%d] =%llu\n", ll, Collapsed_loops, ndxs[Collapsed_loops]);
+                                        //fprintf (stderr, "\tll= %d Breaking loop an finishing because ndxs[%d] =%llu\n", ll, Collapsed_loops, ndxs[Collapsed_loops]);
                                         break;   // terminate inner loop
                                     }
                                     start_layer=ll;
                                     //printf ("changed ndxs[%d]=%llu\n", ll, ndxs[ll]);
                                     // verify whether this ndxs complies with the colouring
                                     invalid_state_qb = validate_RG(ndxs[ll], &colours[ll*NQ], NQ);
-                                    fprintf (stderr, "\tVerified ndxs[%d] =%llu, obtaining invalid_state_qb=%d\n", ll,  ndxs[ll], invalid_state_qb);
+                                    //fprintf (stderr, "\tVerified ndxs[%d] =%llu, obtaining invalid_state_qb=%d\n", ll,  ndxs[ll], invalid_state_qb);
                                     if (invalid_state_qb != -1) { // need to know invalid bit index
                                         ndxs[ll] |= ((1 << invalid_state_qb)- 1) ; // skip all  intermediate non valid states
                                     }
                                 }  // while (invalid_state_green)
                                 //printf ("END FOR LOOP ndxs[%d]=%llu\n", ll, ndxs[ll]);
                             }  // for backward change layers ndxs
-                            fprintf (stderr, "Goint to while with ndxs[0]=%llu, start_layer=%d\n",  ndxs[0], start_layer);
+                            //fprintf (stderr, "Goint to while with ndxs[0]=%llu, start_layer=%d\n",  ndxs[0], start_layer);
 
                         } // main simulation loop (while)
 #if defined(_OPENMP)
