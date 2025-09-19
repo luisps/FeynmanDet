@@ -307,6 +307,8 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                             int invalid_state_qb = 0;  // -1 is valid
                             for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=Collapsed_loops && invalid_state_qb != -1 ; ll--) {
                                 
+                                fprintf (stderr, "Updating ndxs[%d] from %llu\n", ll, ndxs[ll]);
+                                
                                 invalid_state_qb = 0;  // -1 is valid
                                 while(invalid_state_qb!=-1) {
                                     ndxs[ll]++;
