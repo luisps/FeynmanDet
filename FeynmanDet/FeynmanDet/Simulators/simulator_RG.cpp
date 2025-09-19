@@ -270,6 +270,11 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                             
                             // iterate over layers
                             for (l=start_layer ; l<L ; l++) {
+                                fprintf (stderr, "\tP (iterate l=%d)= ", l);
+                                for (int lll=0; lll<(L-1); lll++) {
+                                    fprintf (stderr, "s[%d] = %llu ", lll, ndxs[lll]);
+                                }
+                                fprintf (stderr, "\n");
                                 lR=1.f; lI=0.f;
                                 next_state = (l< L-1 ? ndxs[l] : final_state);
                                 
