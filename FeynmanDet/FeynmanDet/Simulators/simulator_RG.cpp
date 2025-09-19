@@ -193,8 +193,15 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #else
                         int const Collapsed_loops=0;
 #endif
+                        fprintf(stderr, "Collapsed_loops=%d\n", Collapsed_loops);
                         for (int i=Collapsed_loops ; i<L-1 ; i++) ndxs[i]=0 ;
                         
+                        fprintf (stderr, "\tinitial P = ");
+                        for (int lll=0; lll<(L-1); lll++) {
+                            fprintf (stderr, "s[%d] = %llu ", lll, ndxs[lll]);
+                        }
+                        fprintf (stderr, "\n");
+
                         float wR[L-1], wI[L-1];
                         
                         float pathR = 1.f;
