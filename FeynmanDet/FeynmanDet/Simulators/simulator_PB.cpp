@@ -274,7 +274,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                         
                         // We have to validate whether ndxs0 is a valid state
                         // given the colouring
-                        if(!validate_PB (ndxs0, &colours[0*NQ], NQ)){
+                        if(!validate_PB (ndxs0, init_state, &colours[0*NQ], NQ)){
                             
                             continue;  // if not valid and _COLLAPSE2 skip to next ndxs1
                             // very unfortunate
@@ -300,7 +300,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #if defined(_COLLAPSE2)
                         // We have to validate whether ndxs1 is a valid state
                         // given the colouring
-                        if(!validate_PB (ndxs1, &colours[1*NQ], NQ)){
+                        if(!validate_PB (ndxs1, ndxs0, &colours[1*NQ], NQ)){
                             
                             continue;  // if not valid and _COLLAPSE2 skip to next ndxs1
                         }
@@ -399,7 +399,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                                     //printf ("changed ndxs[%d]=%llu (ndxs[0] = %llu) \n", ll, ndxs[ll], ndxs[0]);
                                     
                                     // verify whether this ndxs complies with the colouring
-                                    invalid_state_green = !validate_PB(ndxs[ll], &colours[ll*NQ], NQ);
+                                    invalid_state_green = !validate_PB(ndxs[ll], prev_state, &colours[ll*NQ], NQ);
                                     /*if (invalid_state_green) { // need to know invalid bit index
                                      ndxs[ll] |= ((1 << i)- 1) ; // skip all  intermediate non valid states
                                      }*/
