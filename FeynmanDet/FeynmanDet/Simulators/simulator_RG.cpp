@@ -299,7 +299,7 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                             // if l==0 (0 amplitude in the first layer)
                             // break off from the while loop
                             // (to iterate over ndxs1)
-                            if (l==Collapsed_loops-1) break;
+                            if (l==(Collapsed_loops-1)) break;
                             // updating ndxs[Collapsed_loops..L-2]
                             // compute next path skipping invalid GREENs
                             
@@ -308,6 +308,11 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                             for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=Collapsed_loops && invalid_state_qb != -1 ; ll--) {
                                 
                                 fprintf (stderr, "ll= %d\n\tUpdating ndxs[%d] from %llu\n", ll, ll, ndxs[ll]);
+                                fprintf (stderr, "\tP = ");
+                                for (int lll=0; lll<(L-1); lll++) {
+                                    fprintf (stderr, "s[%d] = %llu ", lll, ndxs[lll]);
+                                }
+                                fprintf (stderr, "\n");
                                 
                                 invalid_state_qb = 0;  // -1 is valid
                                 while(invalid_state_qb!=-1) {
