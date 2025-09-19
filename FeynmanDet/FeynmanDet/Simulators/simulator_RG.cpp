@@ -202,7 +202,7 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                         }
                         fprintf (stderr, "\n");
 
-                        float wR[L-1], wI[L-1];
+                        float wR[L], wI[L];
                         
                         float pathR = 1.f;
                         float pathI = 0.f;
@@ -282,8 +282,8 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                                 layer_w(layer, l, current_state, next_state, lR, lI);
                                 complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
                                 
-                                //wR[l]=pathR;
-                                //wI[l]=pathI;
+                                wR[l]=pathR;
+                                wI[l]=pathI;
                                 if (complex_abs_square(lR, lI) <= 0.f) {
                                     zero_weight_layer=true;
                                     pathR = pathI = 0.f;
