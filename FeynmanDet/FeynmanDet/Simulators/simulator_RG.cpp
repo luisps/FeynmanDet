@@ -307,17 +307,19 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                             int invalid_state_qb = 0;  // -1 is valid
                             for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=Collapsed_loops && invalid_state_qb != -1 ; ll--) {
                                 
-                                fprintf (stderr, "Updating ndxs[%d] from %llu\n", ll, ndxs[ll]);
+                                fprintf (stderr, "ll= %d\n\tUpdating ndxs[%d] from %llu\n", ll, ll, ndxs[ll]);
                                 
                                 invalid_state_qb = 0;  // -1 is valid
                                 while(invalid_state_qb!=-1) {
                                     ndxs[ll]++;
                                     if (ndxs[ll]==N && ll>Collapsed_loops)  { // this layer overflows
                                         ndxs[ll] = 0;
+                                        fprintf (stderr, "\tll= %d Breaking loop to go to ll=%d\n", ll, ll);
                                         break;        // break only from inner loop
                                     }
                                     else if (ndxs[Collapsed_loops]==N && ll==Collapsed_loops)  { // back to for loops
                                         invalid_state_qb = -1; // terminate outer loop
+                                        fprintf (stderr, "\tll= %d Breaking loop an finishing because ndxs[%d] =%llu\n", ll, Collapsed_loops, ndxs[Collapsed_loops]);
                                         break;   // terminate inner loop
                                     }
                                     start_layer=ll;
