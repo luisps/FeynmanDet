@@ -143,6 +143,9 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #endif
             
             StateT path_counterL=0, path_NZ_counterL=0;
+            
+            float sumR=0.f, sumI=0.f;
+#if defined(_OPENMP)
             // explicitly include up to 2 for loops
             // for parallel execution by OpenMP
             
@@ -151,9 +154,6 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
             // The next pre-processor constant tells us whetehr or not
             // to collapse
             StateT ndxs0;
-            
-            float sumR=0.f, sumI=0.f;
-#if defined(_OPENMP)
             //#define _COLLAPSE2
 #if defined(_COLLAPSE2)
             StateT ndxs1;
