@@ -326,13 +326,15 @@ void simulate_RG_paths (TCircuit *circuit, StateT init_state, StateT final_state
                                     //printf ("changed ndxs[%d]=%llu\n", ll, ndxs[ll]);
                                     // verify whether this ndxs complies with the colouring
                                     invalid_state_qb = validate_RG(ndxs[ll], &colours[ll*NQ], NQ);
+                                    fprintf (stderr, "\tVerified ndxs[%d] =%llu, obtaining invalid_state_qb=%d\n", ll,  ndxs[ll], invalid_state_qb);
                                     if (invalid_state_qb != -1) { // need to know invalid bit index
                                         ndxs[ll] |= ((1 << invalid_state_qb)- 1) ; // skip all  intermediate non valid states
                                     }
                                 }  // while (invalid_state_green)
                                 //printf ("END FOR LOOP ndxs[%d]=%llu\n", ll, ndxs[ll]);
                             }  // for backward change layers ndxs
-                            
+                            fprintf (stderr, "Goint to while with ndxs[0]=%llu, start_layer=%d\n",  ndxs[0], start_layer);
+
                         } // main simulation loop (while)
 #if defined(_OPENMP)
 #if defined(_COLLAPSE2)
