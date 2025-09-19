@@ -394,7 +394,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                                         break;        // break only from inner loop
                                     }
                                     else if (ndxs[Collapsed_loops]==N && ll==Collapsed_loops)  { // back to for loops
-                                        invalid_state_green = -1; // terminate outer loop
+                                        invalid_state_qb = -1; // terminate outer loop
                                         break;   // terminate inner loop
                                     }
                                     start_layer=ll;
