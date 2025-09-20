@@ -213,6 +213,8 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 
         StateT path_counterL=0, path_NZ_counterL=0;
     
+        float sumR=0.f, sumI=0.f;
+#if defined(_OPENMP)
         // explicitly include up to 2 for loops
         // for parallel execution by OpenMP
         
@@ -221,9 +223,6 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
         // The next pre-processor constant tells us whetehr or not
         // to collapse
         StateT ndxs0;
-
-        float sumR=0.f, sumI=0.f;
-#if defined(_OPENMP)
 //#define _COLLAPSE2
 #if defined(_COLLAPSE2)
         StateT ndxs1;
@@ -239,8 +238,6 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #pragma omp for schedule(dynamic)
                 for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
 #endif
-#else
-                    for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
 #endif
                         
 #if defined(_OPENMP)
@@ -248,32 +245,34 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #endif
                         
                         
-                        // all intermediate layers indexes to 0
-                        // except intermediate layer 0
-                        // this one iterates as a for loop, to facilitate OpenMP
-                        StateT ndxs[L-1];
-                        // we make ndxs[0] equal to ndxs0
-                        // only to avoid conditionals below
-                        // this is only for reading
-                        // all writes must be made to ndxs0
-                        ndxs[0] = ndxs0;
+                // all intermediate layers indexes to 0
+                // except intermediate layer 0
+                // this one iterates as a for loop, to facilitate OpenMP
+                    StateT ndxs[L-1];
+                // we make ndxs[0] equal to ndxs0
+                // only to avoid conditionals below
+                // this is only for reading
+                // all writes must be made to ndxs0
+#if defined(_OPENMP)
+                    ndxs[0] = ndxs0;
+                    int const Collapsed_loops=1;
 #if defined(_COLLAPSE2)
                         ndxs[1] = ndxs1;
-#endif
-#if defined(_COLLAPSE2)
                         int const Collapsed_loops=2;
+#endif
 #else
-                        int const Collapsed_loops=1;
+                        int const Collapsed_loops=0;
 #endif
                         for (int i=Collapsed_loops ; i<L-1 ; i++) ndxs[i]=0 ;
                         
-                        float wR[L-1], wI[L-1];
+                        float wR[L], wI[L];
                         
                         float pathR = 1.f;
                         float pathI = 0.f;
                         float lR=1.f;
                         float lI=0.f;
                         
+#if defined(_OPENMP)
                         // We have to validate whether ndxs0 is a valid state
                         // given the colouring
                         if(validate_PB (ndxs0, init_state, &colours[0*NQ], NQ) != -1){
@@ -317,6 +316,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                         complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
                         wR[1]=pathR;
                         wI[1]=pathI;
+#endif
 #endif
                         
                         int start_layer=Collapsed_loops;
@@ -411,10 +411,12 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                             }    // for backward change layers ndxs
                             
                         } // main simulation loop (while)
+#if defined(_OPENMP)
 #if defined(_COLLAPSE2)
                     }  // main simulation loop (ndxs1 and omp for)
 #endif
                 }  // main simulation loop (ndxs0 and omp for)
+#endif
 #if defined(_OPENMP)
 #pragma omp atomic
 #endif
@@ -439,7 +441,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                  
                  #endif
                  */
-            }// end omp parallel
+            }// end omp parallel (NOTE: { included even if !NOT _OPENMP)
             
             printf ("\n");
     printf ("< %llu | U | %llu > = %.6f + i %.6f, p=%.6f\n", final_state, init_state, aR, aI, aR*aR+aI*aI);
