@@ -1,0 +1,20 @@
+
+508	RND 8 bits
+510	RND 10 bits
+512	RND 12 bits
+
+4101	HSC ? bits
+4110	HSC 10 bits
+4120 	HSC 20 bits
+
+3008	RSQ 8 bits
+3010	RSQ 10 bits
+3016	RSQ 16 bits
+
+2005	IQP 5 bits
+2015	IQP 15 bits
+2025	IQP 25 bits
+
+1005 	SU 5 bits
+1015    SU 15 qubits
+1025    SU 25 qubits
