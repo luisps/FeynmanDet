@@ -1,0 +1,16 @@
+Colouring: 
+qb0: P	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	
+qb1: P	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	
+qb2: P	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	G0	
+qb3: P	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	G0	G0	
+qb4: P	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	BI	G0	G0	G0	
+
+Circuit: circuits/circuit_2005.data
+PB_PATHS
+L= 17 
+NQ= 5 
+N= 32 
+< 0 | U | 0 > = -0.104462 + i 0.106694, p=0.022296
+486 paths, 32 non zero
+Time taken is: 0.002304 secs
+

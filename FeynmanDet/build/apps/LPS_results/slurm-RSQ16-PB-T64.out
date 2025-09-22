@@ -1,0 +1,14 @@
+OpenMP enabled: 128 cores.
+Circuit: circuits/circuit_3016.data
+PB_PATHS
+L= 16 
+NQ= 16 
+N= 65536 
+1.766847e+72 existing paths
+OpenMP: 64 threads required
+OpenMP: thread 1 reports 64 threads
+
+< 0 | U | 0 > = -0.001620 + i -0.003889, p=0.000018
+36557641219 paths, 8589934592 non zero
+Time taken is: 27225100.16 mili secs
+

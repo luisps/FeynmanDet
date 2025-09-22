@@ -1,0 +1,12 @@
+Circuit: circuits/circuit_510.data
+PB_PATHS
+L= 13 
+NQ= 10 
+N= 1024 
+1.329228e+36 existing paths
+OpenMP NOT IDENTIFIED
+
+< 0 | U | 0 > = 0.022097 + i 0.053347, p=0.003334
+719314 paths, 262144 non zero
+Time taken is: 154.12 mili secs
+
