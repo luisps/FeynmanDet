@@ -1,0 +1,12 @@
+Circuit: circuits/circuit_23.data
+ALL_PATHS
+L= 10 
+NQ= 11 
+N= 2048 
+6.338253e+29 existing paths
+OpenMP NOT IDENTIFIED
+
+< 16 | U | 0 > = 0.011049 + i 0.004576, p=0.000143
+1216925128 evaluated paths, 2048 non zero
+Time taken is: 57.653982 secs
+

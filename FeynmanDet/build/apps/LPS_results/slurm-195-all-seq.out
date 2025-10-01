@@ -1,0 +1,12 @@
+Circuit: circuits/circuit_195.data
+ALL_PATHS
+L= 13 
+NQ= 6 
+N= 64 
+4.722366e+21 existing paths
+OpenMP NOT IDENTIFIED
+
+< 0 | U | 0 > = -0.005146 + i -0.021046, p=0.000469
+7874560 evaluated paths, 4096 non zero
+Time taken is: 0.212913 secs
+

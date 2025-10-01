@@ -1,0 +1,47 @@
+CXX      := g++ 
+CXXFLAGS := -O3 -Wall
+OPENMP	 := -fopenmp -fno-math-errno
+LDFLAGS  := 
+BUILD    := ./build
+OBJ_DIR  := $(BUILD)/objects-omp
+APP_DIR  := $(BUILD)/apps
+SHELL	 := /bin/bash
+
+SRC_DIR   := FeynmanDet
+TARGET   := FeynmanDet-omp
+
+INCLUDE  := -I$(SRC_DIR)/BaseFunctionalty -I$(SRC_DIR)/Simulators -I$(SRC_DIR)
+
+SRC      :=                      \
+   $(wildcard $(SRC_DIR)/*.cpp) \
+   $(wildcard $(SRC_DIR)/BaseFunctionalty/*.cpp)         \
+   $(wildcard $(SRC_DIR)/Simulators/*.cpp)         
+
+OBJECTS  := $(SRC:%.cpp=$(OBJ_DIR)/%.o)
+DEPENDENCIES \
+         := $(OBJECTS:.o=.d)
+
+all:	build $(APP_DIR)/$(TARGET)
+
+$(OBJ_DIR)/%.o: %.cpp
+	module load GCC/12.3.0
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(OPENMP) $(INCLUDE) -c $< -MMD -o $@
+
+$(APP_DIR)/$(TARGET): $(OBJECTS)
+	module load GCC/12.3.0
+	@mkdir -p $(@D)
+	$(CXX) $(CXXFLAGS) $(OPENMP) -o $(APP_DIR)/$(TARGET) $^ $(LDFLAGS)
+
+-include $(DEPENDENCIES)
+
+.PHONY: all build clean 
+
+build:
+	@mkdir -p $(APP_DIR)
+	@mkdir -p $(OBJ_DIR)
+
+clean:
+	-@rm -rvf $(OBJ_DIR)/*
+
+
