@@ -27,6 +27,7 @@ const float MY_SQRT1_2 = 0.707106781186548f;
 // 'z'  - 4
 // 's'  - 5 
 // 't'  - 6
+// 'tdg'  - 7   T dagger
 // G1P1 - 1 qubit, 1 parameter
 // 'rx'  - 11 B
 // 'ry'  - 12 B
@@ -73,6 +74,11 @@ inline void gate_s_w (int i_qb, int o_qb, float &wR, float &wI) {
 inline void gate_t_w (int i_qb, int o_qb, float &wR, float &wI) {
     wR = ((i_qb == o_qb)  ? (i_qb == 0 ? 1.f : M_SQRT2_OVER_2) : 0.f );
     wI = ((i_qb == o_qb)  ? (i_qb == 0 ? 0.f : M_SQRT2_OVER_2) : 0.f );
+}
+
+inline void gate_tt_w (int i_qb, int o_qb, float &wR, float &wI) {
+    wR = ((i_qb == o_qb)  ? (i_qb == 0 ? 1.f : M_SQRT2_OVER_2) : 0.f );
+    wI = ((i_qb == o_qb)  ? (i_qb == 0 ? 0.f : -M_SQRT2_OVER_2) : 0.f );
 }
 
 // G1P1 gates attached 2x2 unitary is used

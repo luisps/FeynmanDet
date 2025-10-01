@@ -43,6 +43,9 @@ void layer_w (TCircuitLayer *layer, int l,
             case 6:             // t
                 gate_t_w (curr_state_qb, next_state_qb, gatewR, gatewI);
                 break;
+            case 7:             // t dagger
+                gate_tt_w (curr_state_qb, next_state_qb, gatewR, gatewI);
+                break;
             default:             // id
                 gate_id_w (curr_state_qb, next_state_qb, gatewR, gatewI);
                 break;
