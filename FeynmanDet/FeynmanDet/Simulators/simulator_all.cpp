@@ -78,6 +78,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_COLLAPSE_D)
         // take care here: code must be rewritten for D>2
         StateT ndxs1;
+        StateT const T = N*N;
         const uint64_t a = 11400714819323198485ull; // any odd constant
         uint64_t mask = T - 1;
 #endif
