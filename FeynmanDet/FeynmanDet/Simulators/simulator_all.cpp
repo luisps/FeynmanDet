@@ -78,7 +78,8 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_COLLAPSE_D)
         // take care here: code must be rewritten for D>2
         StateT ndxs1;
-        StateT const T = N*N;
+        // manually flatten the collapsed for loops
+        StateT const T = 1 << (NQ + D);
         const uint64_t a = 11400714819323198485ull; // any odd constant
         uint64_t mask = T - 1;
 #endif
@@ -86,8 +87,6 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         start=omp_get_wtime();
         int n_tasks=0;
 #if defined(_COLLAPSE_D)
-        // manually flatten the collapsed for loops
-        StateT const T = 1 << (NQ + D);
 #pragma omp for schedule(static)
         for (StateT t = 0 ; t < N ; t++) {
             uint64_t k = (a * t) & mask;
