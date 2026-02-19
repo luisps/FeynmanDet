@@ -47,15 +47,15 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         int const n_cores = omp_get_num_procs();
         n_threads = (N>n_cores ? n_cores : N);
     }
-    //fprintf (stderr, "OpenMP: %d threads required\n", n_threads);
+    fprintf (stderr, "OpenMP: %d threads required\n", n_threads);
 #pragma omp parallel num_threads(n_threads) proc_bind(spread)
     {
         int const threadID = omp_get_thread_num();
         
 #pragma omp single nowait
 	    {
-    	//fprintf (stderr, "OpenMP: thread %d reports %d threads\n", threadID, omp_get_num_threads());
-    	//fflush (stderr);
+    	fprintf (stderr, "OpenMP: thread %d reports %d threads\n", threadID, omp_get_num_threads());
+    	fflush (stderr);
 	    }
 #else
     {
