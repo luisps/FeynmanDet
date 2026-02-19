@@ -12,6 +12,8 @@
 
 #include "simulator_all.hpp"
 
+#define _OPENMP
+
 #if defined(_OPENMP)
 #include <omp.h>
 extern int n_threads;
@@ -26,13 +28,13 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
     
     if (L<4) { // 4 layers are required
         fprintf (stderr, "The circuit has %d layers: 4 is the minimum!\n", L);
+        fflush(stderr);
         return ;
     }
 
     double const total_paths = pow(2.F, (double)(NQ*(L-1)));
     fprintf (stdout, "%le existing paths\n", total_paths);
     
-    fflush(stderr);
     fflush(stdout);
     
     aR = aI = 0.f;
@@ -88,7 +90,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         int n_tasks=0;
 #if defined(_COLLAPSE_D)
 #pragma omp for schedule(static)
-        for (StateT t = 0 ; t < N ; t++) {
+        for (StateT t = 0 ; t < T ; t++) {
             uint64_t k = (a * t) & mask;
             // ndxs[d] = (k >> (d*m)) & (N - 1);
             ndxs0 = (StateT) ((k >> (0*NQ)) & (N - 1));
@@ -117,10 +119,10 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 // this is only for reading
                 // all writes must be made to ndxs0
                 ndxs[0] = ndxs0;
-#if defined(_COLLAPSE2)
+#if defined(_COLLAPSE_D)
                 ndxs[1] = ndxs1;
 #endif
-#if defined(_COLLAPSE2)
+#if defined(_COLLAPSE_D)
             int const Collapsed_loops=2;
 #else
             int const Collapsed_loops=1;
@@ -150,7 +152,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                     wR[0]=pathR = lR;
                     wI[0]=pathI = lI;
                     
-#if defined(_COLLAPSE2)
+#if defined(_COLLAPSE_D)
                     // early termination if the amplitude
                     // from ndxs[0] to ndxs[1] is zero
                     lR=1.f; lI=0.f;
@@ -236,9 +238,6 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                             break;
                     }
                 } // main simulation loop (while)
-#if defined(_COLLAPSE2)
-            }  // main simulation loop (ndxs1 and omp for)
-#endif
         }  // main simulation loop (ndxs0 and omp for)
 #if defined(_OPENMP)
 #pragma omp atomic
@@ -256,14 +255,14 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #pragma omp atomic
 #endif
         path_NZ_counter += path_NZ_counterL;
-        /*
+        
 #if defined(_OPENMP)
         end=omp_get_wtime();
         double time_taken=double(end - start)*1000.F;
         printf ("Thread %d: %llu evaluated paths, %llu non zero (%.2lf mili secs), n_tasks=%d\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, time_taken, n_tasks);
 
 #endif
-         */
+         
     } // end omp parallel
 
     printf ("\n");
