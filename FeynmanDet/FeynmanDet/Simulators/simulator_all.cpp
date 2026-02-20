@@ -81,7 +81,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         // take care here: code must be rewritten for D>2
         StateT ndxs1;
         // manually flatten the collapsed for loops
-        StateT const T = 1 << (NQ + D);
+        StateT const T = 1ull << (NQ * D);
         const uint64_t a = 11400714819323198485ull; // any odd constant
         uint64_t mask = T - 1;
 #endif
