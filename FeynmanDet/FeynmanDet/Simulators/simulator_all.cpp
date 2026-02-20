@@ -12,7 +12,7 @@
 
 #include "simulator_all.hpp"
 
-//#define _OPENMP
+#define _OPENMP
 
 #if defined(_OPENMP)
 #include <omp.h>
@@ -80,30 +80,41 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_OPENMP)
 #define _COLLAPSE_D
 #define _SCRAMBLE
-        int const D=2;
+        int const D=3;
 #if defined(_COLLAPSE_D)
-        // take care here: code must be rewritten for D>2
-        StateT ndxs1;
         // manually flatten the collapsed for loops
-        StateT const T = 1ull << (NQ * D);
-        const uint64_t a = 11400714819323198485ull; // any odd constant
-        uint64_t mask = T - 1;
+        // take care here: code must be rewritten for D>3
+        StateT ndxs1, ndxs2;
+        const uint64_t maskN = N - 1;
+        const int m = __builtin_ctzll(N);   // since N is power of two
+
+        // Compute T = N^D = 2^(mD)
+        const int total_bits = m * D;
+        const uint64_t T = 1ULL << total_bits;
+        const uint64_t maskT = T - 1;
+
+        // Choose affine permutation parameters
+        const uint64_t a = 6364136223846793005ULL;  // must be odd
+        const uint64_t b = 1442695040888963407ULL;
+
 #endif
         double start, end;
         start=omp_get_wtime();
         int n_tasks=0;
 #if defined(_COLLAPSE_D)
-#pragma omp for schedule(dynamic, CHUNKSIZE)
-//#pragma omp for schedule(dynamic)
+//#pragma omp for schedule(dynamic, CHUNKSIZE)
+#pragma omp for schedule(static)
         for (StateT t = 0 ; t < T ; t++) {
 #if defined(_SCRAMBLE)
-            uint64_t k = (a * t) & mask;
-            // ndxs[d] = (k >> (d*m)) & (N - 1);
-            ndxs0 = (StateT) ((k >> (0*NQ)) & (N - 1));
-            ndxs1 = (StateT) ((k >> (1*NQ)) & (N - 1));
+            uint64_t k = (a * t + b) & maskT;
+
+                ndxs0 = k >> (m*(D-1));
+                ndxs1 = (k >> (D-2)) & maskN;
+                ndxs2 = k & maskN;
 #else
             ndxs0 = (StateT) ((t >> (0*NQ)) & (N - 1));
             ndxs1 = (StateT) ((t >> (1*NQ)) & (N - 1));
+            ndxs2 = (StateT) ((k >> (2*NQ)) & (N - 1));
 #endif
 #else
 #pragma omp for schedule(static, CHUNKSIZE)
@@ -130,10 +141,16 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 // all writes must be made to ndxs0
                 ndxs[0] = ndxs0;
 #if defined(_COLLAPSE_D)
-                ndxs[1] = ndxs1;
+            switch (D) {
+                case 3:
+                    ndxs[2] = ndxs2;
+                case 2:
+                    ndxs[1] = ndxs1;
+            }
+                
 #endif
 #if defined(_COLLAPSE_D)
-            int const Collapsed_loops=2;
+            int const Collapsed_loops=D;
 #else
             int const Collapsed_loops=1;
 #endif
