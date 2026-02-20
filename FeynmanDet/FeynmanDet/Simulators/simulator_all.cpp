@@ -180,6 +180,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
             wI[0]=pathI = lI;
                     
 #if defined(_COLLAPSE_D)
+            bool do_continue = false;
             for (int d=1 ; d<D ; d++) {
                 // early termination if the amplitude
                 // from ndxs[d-1] to ndxs[d] is zero
@@ -187,12 +188,14 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 layer = &circuit->layers[d];
                 layer_w(layer, d, ndxs[d-1], ndxs[d], lR, lI);
                 if (complex_abs_square(lR, lI) <= 0.f) {
-                    continue;  // next t
+                    do_continue = true;
+                    break;  // next t
                 }
                 complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
                 wR[d]=pathR;
                 wI[d]=pathI;
             }
+            if (do_continue) continue;
 #endif
 
             int start_layer=Collapsed_loops;
