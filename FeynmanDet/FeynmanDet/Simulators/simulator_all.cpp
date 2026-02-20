@@ -93,7 +93,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         start=omp_get_wtime();
         int n_tasks=0;
 #if defined(_COLLAPSE_D)
-#pragma omp for schedule(static, CHUNKSIZE)
+#pragma omp for schedule(dynamic, CHUNKSIZE)
 //#pragma omp for schedule(dynamic)
         for (StateT t = 0 ; t < T ; t++) {
 #if defined(_SCRAMBLE)
