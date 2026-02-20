@@ -76,6 +76,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         float sumR=0.f, sumI=0.f;
 #if defined(_OPENMP)
 #define _COLLAPSE_D
+//#define _SCRAMBLE
         int const D=2;
 #if defined(_COLLAPSE_D)
         // take care here: code must be rewritten for D>2
@@ -91,10 +92,15 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_COLLAPSE_D)
 #pragma omp for schedule(static)
         for (StateT t = 0 ; t < T ; t++) {
+#if defined(_SCRAMBLE)
             uint64_t k = (a * t) & mask;
             // ndxs[d] = (k >> (d*m)) & (N - 1);
             ndxs0 = (StateT) ((k >> (0*NQ)) & (N - 1));
             ndxs1 = (StateT) ((k >> (1*NQ)) & (N - 1));
+#else
+            ndxs0 = (StateT) ((t >> (0*NQ)) & (N - 1));
+            ndxs1 = (StateT) ((t >> (1*NQ)) & (N - 1));
+#endif
 #else
 #pragma omp for schedule(static)
         for (t = 0 ; t < N ; t++) {
