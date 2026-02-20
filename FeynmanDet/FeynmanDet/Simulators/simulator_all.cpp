@@ -95,11 +95,11 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_SCRAMBLE)
             uint64_t k = (a * t) & mask;
             // ndxs[d] = (k >> (d*m)) & (N - 1);
-            ndxs0 = (StateT) ((k >> (1*NQ)) & (N - 1));
-            ndxs1 = (StateT) ((k >> (0*NQ)) & (N - 1));
+            ndxs0 = (StateT) ((k >> (0*NQ)) & (N - 1));
+            ndxs1 = (StateT) ((k >> (1*NQ)) & (N - 1));
 #else
-            ndxs0 = (StateT) ((t >> (1*NQ)) & (N - 1));
-            ndxs1 = (StateT) ((t >> (0*NQ)) & (N - 1));
+            ndxs0 = (StateT) ((t >> (0*NQ)) & (N - 1));
+            ndxs1 = (StateT) ((t >> (1*NQ)) & (N - 1));
 #endif
 #else
 #pragma omp for schedule(static)
