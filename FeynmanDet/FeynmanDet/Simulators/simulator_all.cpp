@@ -79,7 +79,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         float sumR=0.f, sumI=0.f;
 #if defined(_OPENMP)
 #define _COLLAPSE_D
-//#define _SCRAMBLE
+#define _SCRAMBLE
         int const D=2;
 #if defined(_COLLAPSE_D)
         // take care here: code must be rewritten for D>2
