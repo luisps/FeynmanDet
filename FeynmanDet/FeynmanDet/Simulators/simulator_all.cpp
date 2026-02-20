@@ -17,6 +17,9 @@
 #if defined(_OPENMP)
 #include <omp.h>
 extern int n_threads;
+
+#define CHUNKSIZE 4
+
 #endif
 
 void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
@@ -90,7 +93,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         start=omp_get_wtime();
         int n_tasks=0;
 #if defined(_COLLAPSE_D)
-#pragma omp for schedule(static)
+#pragma omp for schedule(static, CHUNKSIZE)
         for (StateT t = 0 ; t < T ; t++) {
 #if defined(_SCRAMBLE)
             uint64_t k = (a * t) & mask;
@@ -102,7 +105,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
             ndxs1 = (StateT) ((t >> (1*NQ)) & (N - 1));
 #endif
 #else
-#pragma omp for schedule(static)
+#pragma omp for schedule(static, CHUNKSIZE)
         for (t = 0 ; t < N ; t++) {
             uint64_t k = (a * t) & mask;
             // ndxs[d] = (k >> (d*m)) & (N - 1);
