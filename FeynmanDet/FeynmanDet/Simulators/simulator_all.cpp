@@ -103,7 +103,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         int n_tasks=0;
 #if defined(_COLLAPSE_D)
 //#pragma omp for schedule(dynamic, CHUNKSIZE)
-#pragma omp for schedule(static)
+#pragma omp for schedule(static, CHUNKSIZE)
         for (StateT t = 0 ; t < T ; t++) {
 #if defined(_SCRAMBLE)
             uint64_t k = (a * t + b) & maskT;
