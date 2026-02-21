@@ -71,7 +71,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         // for parallel execution by OpenMP
         
         // We will be using openMP parallel for
-        // and eventually collapsing 2 (two) for loops
+        // and eventually collapsing 3 (three) for loops
         // The next pre-processor constant tells us whetehr or not
         // to collapse
         StateT ndxs0;
@@ -108,9 +108,16 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_SCRAMBLE)
             uint64_t k = (a * t + b) & maskT;
 
-            ndxs0 = k >> (m*(D-1));
-            ndxs1 = (k >> (D-2)) & maskN;
-            ndxs2 = k & maskN;
+            if (D == 1) {
+                 ndxs0 = k;
+            } else if (D == 2) {
+                ndxs0 = k >> m;
+                ndxs1 = k & maskN;
+            } else if (D == 3) {
+                ndxs0 = k >> (2*m);
+                ndxs1 = (k >> m) & maskN;
+                ndxs2 = k & maskN;
+            }
 #else
             ndxs0 = (StateT) ((t >> (0*NQ)) & (N - 1));
             ndxs1 = (StateT) ((t >> (1*NQ)) & (N - 1));
@@ -173,7 +180,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
             // which in fact is a tuple (ndxs0,ndxs1, ndxs2)
             // if the amplitude wasn't zero
             if (complex_abs_square(lR, lI) <= 0.f) {
-                continue;
+                continue;  // next t
             }
                 
             wR[0]=pathR = lR;
@@ -195,7 +202,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 wR[d]=pathR;
                 wI[d]=pathI;
             }
-            if (do_continue) continue;
+            if (do_continue) continue;  // next t
 #endif
 
             int start_layer=Collapsed_loops;
