@@ -57,8 +57,8 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         
 #pragma omp single nowait
 	    {
-    	fprintf (stderr, "OpenMP: thread %d reports %d threads\n", threadID, omp_get_num_threads());
-    	fflush (stderr);
+            fprintf (stderr, "OpenMP: thread %d reports %d threads\n", threadID, omp_get_num_threads());
+            fflush (stderr);
 	    }
 #else
     {
@@ -67,6 +67,8 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
     	fflush (stderr);
 #endif
         StateT path_counterL=0, path_NZ_counterL=0;
+        float sumR=0.f, sumI=0.f;
+
         // explicitly include up to 2 for loops
         // for parallel execution by OpenMP
         
@@ -76,7 +78,6 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         // to collapse
         StateT ndxs0;
 
-        float sumR=0.f, sumI=0.f;
 #if defined(_OPENMP)
 #define _COLLAPSE_D
 #define _SCRAMBLE
@@ -108,8 +109,8 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_SCRAMBLE)
             uint64_t k = (a * t + b) & maskT;
 
-            if (!(t & ((1<<20)-1)))
-                fprintf (stdout, ".");
+            //if (!(t & ((1<<20)-1)))
+            //    fprintf (stdout, ".");
             
             if (D == 1) {
                  ndxs0 = k;
@@ -121,19 +122,19 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 ndxs1 = (k >> m) & maskN;
                 ndxs2 = k & maskN;
             }
-#else
+#else       // _SCRAMBLE
             ndxs0 = (StateT) ((t >> (0*NQ)) & (N - 1));
             ndxs1 = (StateT) ((t >> (1*NQ)) & (N - 1));
             ndxs2 = (StateT) ((t >> (2*NQ)) & (N - 1));
 #endif
-#else
+#else       // _COLLAPSE_D
 #pragma omp for schedule(static, CHUNKSIZE)
         for (t = 0 ; t < N ; t++) {
             uint64_t k = (a * t) & mask;
             // ndxs[d] = (k >> (d*m)) & (N - 1);
             ndxs0 = (StateT) ((k >> (0*NQ)) & (N - 1));
 #endif
-#else
+#else   // _OPENMP
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
 #endif
                 
@@ -244,22 +245,21 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                         break;
                     }
                     current_state = next_state;
-                }
+                } // end iterating layers
                     
                 if (!zero_weight_layer) {
                     sumR += pathR;
                     sumI += pathI;
-                }
-                path_counterL++;
-                /*if (!(path_counter & 0x00FFFFF)) {
-                    fprintf(stderr, "\rpath_counter=%llu", path_counter);
-                }*/
-                if (!zero_weight_layer) {
                     path_NZ_counterL++;
 
                     //fprintf (stderr, "(T%d) - %llu th NZ path (%llu -> %llu -> %llu ...\n", threadID, path_NZ_counterL, init_state, ndxs0, ndxs1);
                     //fflush (stderr);
                 }
+                path_counterL++;
+                /*if (!(path_counter & 0x00FFFFF)) {
+                    fprintf(stderr, "\rpath_counter=%llu", path_counter);
+                }*/
+
                 // compute next path
                 // if l==0 (0 amplitude in the first layer)
                 // break off from the while loop
