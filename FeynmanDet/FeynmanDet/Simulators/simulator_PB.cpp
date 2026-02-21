@@ -13,12 +13,16 @@
 
 #include "simulator_PB.hpp"
 
-#define _OPENMP
+//#define _OPENMP
 
 #if defined(_OPENMP)
 #include <omp.h>
 extern int n_threads;
+
+#define CHUNKSIZE 1
+
 #endif
+
 
 static void print_PB (colourT *states, int NQ, int L) {
     fprintf (stderr, "Colouring: \n");
