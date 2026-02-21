@@ -108,7 +108,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 #if defined(_SCRAMBLE)
             uint64_t k = (a * t + b) & maskT;
 
-            if (t & ((1<<20)-1))
+            if (!(t & ((1<<20)-1)))
                 fprintf (stdout, ".");
             
             if (D == 1) {
