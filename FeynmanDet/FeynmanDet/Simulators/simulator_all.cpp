@@ -12,7 +12,7 @@
 
 #include "simulator_all.hpp"
 
-#define _OPENMP
+//#define _OPENMP
 
 #if defined(_OPENMP)
 #include <omp.h>
