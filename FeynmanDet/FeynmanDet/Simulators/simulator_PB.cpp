@@ -230,20 +230,10 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
         StateT ndxs0;
 
 #if defined(_OPENMP)
-#define _COLLAPSE_D
 #define _SCRAMBLE
-        int const D=3;
-#if defined(_COLLAPSE_D)
-        // manually flatten the collapsed for loops
-        // take care here: code must be rewritten for D>3
-        StateT ndxs1, ndxs2;
+#if defined(_SCRAMBLE)
         const uint64_t maskN = N - 1;
         const int m = __builtin_ctzll(N);   // since N is power of two
-
-        // Compute T = N^D = 2^(mD)
-        const int total_bits = m * D;
-        const uint64_t T = 1ULL << total_bits;
-        const uint64_t maskT = T - 1;
 
         // Choose affine permutation parameters
         const uint64_t a = 6364136223846793005ULL;  // must be odd
@@ -253,38 +243,14 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
         double start, end;
         start=omp_get_wtime();
         int n_tasks=0;
-#if defined(_COLLAPSE_D)
-//#pragma omp for schedule(dynamic, CHUNKSIZE)
-#pragma omp for schedule(static, CHUNKSIZE)
-        for (StateT t = 0 ; t < T ; t++) {
+
 #if defined(_SCRAMBLE)
-            uint64_t k = (a * t + b) & maskT;
-
-            //if (!(t & ((1<<20)-1)))
-            //    fprintf (stdout, ".");
-            if (D == 1) {
-                 ndxs0 = k;
-            } else if (D == 2) {
-                ndxs0 = k >> m;
-                ndxs1 = k & maskN;
-            } else if (D == 3) {
-                ndxs0 = k >> (2*m);
-                ndxs1 = (k >> m) & maskN;
-                ndxs2 = k & maskN;
-            }
-#else   // _SCRAMBLE
-            ndxs0 = (StateT) ((t >> (0*NQ)) & (N - 1));
-            ndxs1 = (StateT) ((t >> (1*NQ)) & (N - 1));
-            ndxs2 = (StateT) ((t >> (2*NQ)) & (N - 1));
-#endif  // _SCRAMBLE
-#else   // _COLLAPSE_D
 #pragma omp for schedule(static, CHUNKSIZE)
-        for (t = 0 ; t < N ; t++) {
-            uint64_t k = (a * t) & mask;
-            // ndxs[d] = (k >> (d*m)) & (N - 1);
-            ndxs0 = (StateT) ((k >> (0*NQ)) & (N - 1));
-
-#endif  // _COLLAPSE_D
+        for (StateT t = 0 ; t < N ; t++) {
+            ndxs0 = (StateT) (a * t + b) & maskN;
+#else
+        for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
+#endif
 #else   // _OPENMP
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
 #endif  // _OPENMP
@@ -292,7 +258,11 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #if defined(_OPENMP)
             n_tasks++;
 #endif
-                        
+            // We have to validate whether ndxs0  is a valid state
+            // given the colouring
+            if(validate_PB (ndxs0, init_state, &colours[0], NQ) != -1) {
+                continue;  //  next t
+            }
                         
             // all intermediate layers indexes to 0
             // except intermediate layer 0
@@ -303,21 +273,8 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             // this is only for reading
             // all writes must be made to ndxs0
             ndxs[0] = ndxs0;
-#if defined(_COLLAPSE_D)
-            switch (D) {
-                case 3:
-                    ndxs[2] = ndxs2;
-                case 2:
-                    ndxs[1] = ndxs1;
-            }
-#endif
-#if defined(_COLLAPSE_D)
-            int const Collapsed_loops=D;
-#else
-            int const Collapsed_loops=1;
-#endif
             
-            for (int i=Collapsed_loops ; i<L-1 ; i++) ndxs[i]=0 ;
+            for (int i=1 ; i<L-1 ; i++) ndxs[i]=0 ;
                         
             float wR[L], wI[L];
                         
@@ -326,25 +283,6 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             float lR=1.f;
             float lI=0.f;
                         
-            // We have to validate whether ndxs0, 1, 2  is a valid state
-            // given the colouring
-            if(validate_PB (ndxs0, init_state, &colours[0*NQ], NQ) != -1) {
-                continue;  //  next t
-            }
-#if defined(_COLLAPSE_D)
-            {
-                bool do_continue = false;
-                for (int d=1 ; d<D && !do_continue ; d++) {
-                    // We have to validate whether ndxs[d] is a valid state
-                    // given the colouring
-                    if(validate_PB (ndxs[d], ndxs[d-1],
-                                    &colours[d*NQ], NQ) != -1){
-                        do_continue = true;
-                    }
-                }
-                if (do_continue) continue;  // next t
-            }
-#endif
             // early termination if the amplitude
             // from init_state to ndxs[0] is zero
             TCircuitLayer *layer = &circuit->layers[0];
@@ -361,30 +299,10 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             wR[0]=pathR = lR;
             wI[0]=pathI = lI;
                         
-#if defined(_COLLAPSE_D)
-            {
-                bool do_continue = false;
-                for (int d=1 ; d<D ; d++) {
-                    // early termination if the amplitude
-                    // from ndxs[d-1] to ndxs[d] is zero
-                    lR=1.f; lI=0.f;
-                    layer = &circuit->layers[d];
-                    layer_w(layer, d, ndxs[d-1], ndxs[d], lR, lI);
-                    if (complex_abs_square(lR, lI) <= 0.f) {
-                        do_continue = true;
-                        break;  // next t
-                    }
-                    complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
-                    wR[d]=pathR;
-                    wI[d]=pathI;
-                }
-                if (do_continue) continue;  // next t
-            }
-#endif
-            int start_layer=Collapsed_loops;
+            int start_layer=1;
                         
             // main simulation loop
-            while (ndxs[Collapsed_loops] < N) {
+            while (ndxs[1] < N) {
                             
                 pathR = (start_layer==0? 1.f : wR[start_layer-1]);
                 pathI = (start_layer==0? 0.f : wI[start_layer-1]);
@@ -432,16 +350,16 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                 // compute next path
                 // if l==0 (0 amplitude in the first layer)
                 // break off from the while loop
-                // (to iterate over ndxs1)
-                if (l==Collapsed_loops-1) break;
+                // (to iterate over t)
+                if (l==0) break;
                             
-                // updating ndxs[Collapsed_loops..L-2]
+                // updating ndxs[1..L-2]
                 // compute next path skipping invalid GREENs
                             
                 // compute next path skipping invalid GREENs and fixed BLUEs
                 int ll;
                 int invalid_state_qb = 0;  // -1 means valid
-                for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=Collapsed_loops && invalid_state_qb != -1 ; ll--) {
+                for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=1 && invalid_state_qb != -1 ; ll--) {
                                 
                     //printf ("change ndxs[%d]=%llu\n", ll, ndxs[ll]);
                     // get the state from the previous layer. Will need it
@@ -452,11 +370,11 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                         ndxs[ll]++;
                         //if (ll==0)  fprintf (stderr, "ndxs[0] = %llu \n", ndxs[0]);
                                     
-                        if (ndxs[ll]==N && ll>Collapsed_loops)  { // this layer overflows
+                        if (ndxs[ll]==N && ll>1)  { // this layer overflows
                             ndxs[ll] = 0;
                             break;        // break only from inner loop
                         }
-                        else if (ndxs[Collapsed_loops]==N && ll==Collapsed_loops)  { // back to for loops
+                        else if (ndxs[1]==N && ll==1)  { // back to for loops
                             invalid_state_qb = -1; // terminate outer loop
                             break;   // terminate inner loop
                         }
