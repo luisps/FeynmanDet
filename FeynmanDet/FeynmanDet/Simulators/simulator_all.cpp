@@ -80,7 +80,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 
 #if defined(_OPENMP)
 //#define _COLLAPSE_D
-//#define _SCRAMBLE
+#define _SCRAMBLE
 #if defined(_COLLAPSE_D) or defined(_SCRAMBLE)
         int const D=3;
         // manually flatten the collapsed for loops
