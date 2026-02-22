@@ -79,8 +79,8 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         StateT ndxs0;
 
 #if defined(_OPENMP)
-#define _COLLAPSE_D
-#define _SCRAMBLE
+//#define _COLLAPSE_D
+//#define _SCRAMBLE
         int const D=3;
 #if defined(_COLLAPSE_D)
         // manually flatten the collapsed for loops
@@ -122,19 +122,20 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 ndxs1 = (k >> m) & maskN;
                 ndxs2 = k & maskN;
             }
-#else       // _SCRAMBLE
+#else       // NO _SCRAMBLE, BUT _COLLAPSE_D
             ndxs0 = (StateT) ((t >> (0*NQ)) & (N - 1));
             ndxs1 = (StateT) ((t >> (1*NQ)) & (N - 1));
             ndxs2 = (StateT) ((t >> (2*NQ)) & (N - 1));
 #endif
-#else       // _COLLAPSE_D
+#else       // NO _COLLAPSE_D
 #pragma omp for schedule(static, CHUNKSIZE)
-        for (t = 0 ; t < N ; t++) {
+        for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
+        /*for (t = 0 ; t < N ; t++) {
             uint64_t k = (a * t) & mask;
             // ndxs[d] = (k >> (d*m)) & (N - 1);
-            ndxs0 = (StateT) ((k >> (0*NQ)) & (N - 1));
+            ndxs0 = (StateT) ((k >> (0*NQ)) & (N - 1)); */
 #endif
-#else   // _OPENMP
+#else   // NO _OPENMP
         for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
 #endif
                 
