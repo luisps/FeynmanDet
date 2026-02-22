@@ -80,7 +80,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
 
 #if defined(_OPENMP)
 #define _COLLAPSE_D
-//#define _SCRAMBLE
+#define _SCRAMBLE
 #if defined(_COLLAPSE_D) or defined(_SCRAMBLE)
         int const D=3;
         // manually flatten the collapsed for loops
@@ -103,13 +103,9 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
         start=omp_get_wtime();
         int n_tasks=0;
 #if defined(_COLLAPSE_D)
-//#pragma omp for schedule(dynamic, CHUNKSIZE)
-#pragma omp for schedule(static, CHUNKSIZE) collapse(3)
-        //for (StateT t = 0 ; t < T ; t++) {
-        for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
-            for (ndxs1 = 0 ; ndxs1 < N ; ndxs1++) {
-                for (ndxs2 = 0 ; ndxs2 < N ; ndxs2++) {
-#if defined(_SCRAMBLE)
+#if defined(_SCRAMBLE)   // _COLLAPSE_D and _SCRAMBLE
+#pragma omp for schedule(static, CHUNKSIZE)
+        for (StateT t = 0 ; t < T ; t++) {
             uint64_t k = (a * t + b) & maskT;
 
             //if (!(t & ((1<<20)-1)))
@@ -126,10 +122,15 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                 ndxs2 = k & maskN;
             }
 #else       // NO _SCRAMBLE, BUT _COLLAPSE_D
+            //#pragma omp for schedule(dynamic, CHUNKSIZE)
+            #pragma omp for schedule(static, CHUNKSIZE) collapse(3)
+            for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
+                for (ndxs1 = 0 ; ndxs1 < N ; ndxs1++) {
+                    for (ndxs2 = 0 ; ndxs2 < N ; ndxs2++) {
             /*ndxs0 = (StateT) ((t >> (0*NQ)) & (N - 1));
             ndxs1 = (StateT) ((t >> (1*NQ)) & (N - 1));
             ndxs2 = (StateT) ((t >> (2*NQ)) & (N - 1));*/
-#endif
+#endif      // _SCRAMBLE
 #else       // NO _COLLAPSE_D
 #if defined(_SCRAMBLE)
 #pragma omp for schedule(static, CHUNKSIZE)
@@ -285,7 +286,7 @@ void simulate_all_paths (TCircuit *circuit, StateT init_state, StateT final_stat
                                             break;
                                     }
                                 } // main simulation loop (while)
-#if defined (_COLLAPSE_D)
+#if defined (_COLLAPSE_D) and not defined(_SCRAMBLE)
                             }
                         }
         }
