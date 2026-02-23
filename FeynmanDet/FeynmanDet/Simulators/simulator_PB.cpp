@@ -72,7 +72,7 @@ static void print_PB (colourT *states, int NQ, int L) {
 
 
 
-// pega no input estado inicial e gate -> d� o estado final (para ver se � 1 ou 0)
+// pega no input estado inicial e gate ->  estado final (para ver se  1 ou 0)
 // gates 2 qubits
 // G2P0 - 2 qubits, no parameters
 // 'id2'  - 20    Used for errors
@@ -512,6 +512,6 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
         printf ("0 amplitude, X magic not computed\n");
     } else {
         X_magic = sum_abs_w_p / amplitude_modulo;
-        printf ("X magic = %.5f\n", X_magic);
+        printf ("X magic = %.5f / %.5f = %.2f\n", sum_abs_w_p, amplitude_modulo, X_magic);
     }
 }
