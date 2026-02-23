@@ -193,6 +193,77 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
     
     //print_PB (colours, NQ, L);
     
+    /*
+     *  Consider the transition amplitude
+     *      A=< final_state | U | initial_state>
+     *
+     *  written as A=< f | U | i> for brevity
+     *
+     *  Compute transition A magic,
+     *  using a Monte Carlo numerical sign severity metric
+     *  X
+     *
+     *  Let w_p be the amplitude of each path p
+     *  Then A = sum_p w_p
+     *  Considering only non-zero transition amplitudes, let
+     *
+     *  X = sum_p |w_p| / |sum_p w_p|
+     *
+     *  X > 1 : high-magic, severe numerical sign MC problem
+     *  X = 1 : no-magic, no numerical sign MC problem
+     *
+     *  X is a measure of the non-stabilizerness in
+     *  the evaluation of the amplitude
+     *  it captures destructive interference among paths,
+     *  due to relative phases adding up in a destructive
+     *  manner.
+     *
+     *  This is related to the relative phases of the paths
+     *  Rewrite w_p = r_p e^{i \phi_p}
+     *
+     *  Then A = sum_p w_p = sum_p [r_p e^{i \phi_p}]
+     *
+     *  If the phases are aligned, then
+     *  e^{i \phi_p} ~ constant = e^{i \phi}
+     *  r_p's add coherently: A ~ sum_p [r_p] e^{i \phi}
+     *
+     *  But if the phases vary, then sums cancel and
+     *  |A| << sum_p [r_p]
+     *
+     *  Let the average phase be
+     *  <e^{i \phi}> = sum_p [r_p e^{i \phi_p}]/ sum_p [r_p]
+     *
+     *  |A| = sum_p [r_p] |<e^i>|
+     *
+     *  If |<e^i>| is small, the numerical sign is strong
+     *  and MC methods observe catastrophic variance
+     *
+     *  Note that by definition |<e^i>| = 1/X
+     *
+     *  Path weights can be thought as vectors in
+     *  the complex plane
+     *  If they are aligned, they sum coherently
+     *  If they are ortoghonal, they cancel
+     *
+     *  Deep geometric insight
+     *
+     *  A = <f| U |i>
+     *  Let |\psi> = U |i>,   then
+     *  A = <f | \psi>
+     *
+     *  Monte Carlo is thus summing a coordinate expansion
+     *  of this inner product in the path basis
+     *
+     *  The numerical sign problem arises when
+     *  the path space is a highly non-aligned basis system
+     *  for representing U |i> relative to |f>
+     *
+     *  If one could find a basis where contributions
+     *  are phase-aligned, the sign problem would vanish.
+     *
+     */
+    float X_magic, sum_abs_w_p = 0.f;
+    
     // Simulation starts
     // omp parallel block
 #if defined(_OPENMP)
@@ -218,6 +289,8 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #endif
 
         StateT path_counterL=0, path_NZ_counterL=0;
+        // thread local to compute X_magic
+        float sum_abs_w_p_L = 0.f;
     
         float sumR=0.f, sumI=0.f;
         // explicitly include up to 2 for loops
@@ -336,6 +409,9 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                     sumR += pathR;
                     sumI += pathI;
                     path_NZ_counterL++;
+                    
+                    // thread local to compute X_magic
+                    sum_abs_w_p_L += complex_abs(pathR, pathI);
                                 
                     // DEBUG
                     /*printf ("Non zero path: ");
@@ -409,6 +485,13 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #pragma omp atomic
 #endif
         path_NZ_counter += path_NZ_counterL;
+
+        // accumulate sum_abs_w_p_L to compute X_magic
+#if defined(_OPENMP)
+#pragma omp atomic
+#endif
+        sum_abs_w_p += sum_abs_w_p_L;
+
         
 #if defined(_OPENMP)
         end=omp_get_wtime();
@@ -422,4 +505,13 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
     printf ("\n");
     printf ("< %llu | U | %llu > = %.6f + i %.6f, p=%.6f\n", final_state, init_state, aR, aI, aR*aR+aI*aI);
     printf ("%llu paths, %llu non zero\n", path_counter, path_NZ_counter);
+            
+    // Compute X_magic
+    float amplitude_modulo = complex_abs(aR, aI);
+    if (amplitude_modulo < __FLT_EPSILON__) {
+        printf ("0 amplitude, X magic not computed\n");
+    } else {
+        X_magic = sum_abs_w_p / amplitude_modulo;
+        printf ("X magic = %.5f\n", X_magic);
+    }
 }
