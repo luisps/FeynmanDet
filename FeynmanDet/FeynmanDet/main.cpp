@@ -93,8 +93,8 @@ int main(int argc, char *argv[]) {
     const int L = circuit->size->num_layers;
     printf("L= %d \n", L);
     const int NQ = circuit->size->num_qubits;
-    if (NQ >64) {
-        fprintf (stderr, "ERROR: maximum 64 qubits allowed\n");
+    if (NQ >21) {
+        fprintf (stderr, "ERROR: maximum 21 qubits allowed\n");
         return 0;
     }
     
