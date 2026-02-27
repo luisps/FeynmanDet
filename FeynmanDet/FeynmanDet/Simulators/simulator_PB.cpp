@@ -536,7 +536,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
             NZ_paths_f = fopen(NZ_paths_filename, "wb");
                 
 #ifdef _OPENMP
-#pragma omp critical NZout
+#pragma omp critical (NZout)
 #endif
             {
                 unsigned int u_aux;
