@@ -13,6 +13,8 @@
 
 #include "simulator_PB.hpp"
 
+#include "FlatStorage.hpp"
+
 //#define _OPENMP
 
 #if defined(_OPENMP)
@@ -23,6 +25,8 @@ extern int n_threads;
 
 #endif
 
+// thread shared file handle to store data on NZ_paths
+static FILE *NZ_paths_f;
 
 static void print_PB (colourT *states, int NQ, int L) {
     fprintf (stderr, "Colouring: \n");
@@ -89,7 +93,7 @@ void printBits(size_t const size, void const * const ptr)
     unsigned char byte;
     int i, j;
     
-    for (i = size-1; i >= 0; i--) {
+    for (i = (int)size-1; i >= 0; i--) {
         for (j = 7; j >= 0; j--) {
             byte = (b[i] >> j) & 1;
             printf("%u", byte);
@@ -140,7 +144,7 @@ int validate_PB (StateT const state, StateT const prev_state, int const *const c
     return invalid;
 }
 
-void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI) {
+void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI, char *NZ_paths_filename) {
 
     const int L = circuit->size->num_layers;
     const int NQ=circuit->size->num_qubits;
@@ -288,6 +292,8 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
         fflush (stderr);
 #endif
 
+        // Object to contain the NZ paths data
+        FlatStorage NZ_paths(L-1);
         StateT path_counterL=0, path_NZ_counterL=0;
         // thread local to compute X_magic
         float sum_abs_w_p_L = 0.f;
@@ -317,8 +323,8 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
         start=omp_get_wtime();
         int n_tasks=0;
 
+#pragma omp for schedule(static, CHUNKSIZE) nowait
 #if defined(_SCRAMBLE)
-#pragma omp for schedule(static, CHUNKSIZE)
         for (StateT t = 0 ; t < N ; t++) {
             ndxs0 = (StateT) (a * t + b) & maskN;
 #else
@@ -410,6 +416,9 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
                     sumI += pathI;
                     path_NZ_counterL++;
                     
+                    // store states of NZ path
+                    NZ_paths.push_back(ndxs, pathR, pathI);
+                    
                     // thread local to compute X_magic
                     sum_abs_w_p_L += complex_abs(pathR, pathI);
                                 
@@ -497,8 +506,65 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
         end=omp_get_wtime();
         double time_taken=double(end - start)*1000.F;
         printf ("Thread %d: %llu evaluated paths, %llu non zero (%.2lf mili secs), n_tasks=%d\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, time_taken, n_tasks);
+
+#pragma omp barrier
                  
 #endif
+        // Compute X_magic
+        float amplitude_modulo = complex_abs(aR, aI);
+#if defined(_OPENMP)
+#pragma omp single nowait
+#endif
+        {
+            if (amplitude_modulo < __FLT_EPSILON__) {
+                X_magic = 0.f;
+            } else {
+                X_magic = sum_abs_w_p / amplitude_modulo;
+            }
+        }
+
+            
+        // output NZ_paths
+        if (NZ_paths_filename) { // only if given
+            int const Ll = L-1;
+#ifdef _OPENMP
+            // single implies a barrier at the end
+            // No file enters the critical region NZout
+            // before the file is open
+#pragma omp single
+#endif
+            NZ_paths_f = fopen(NZ_paths_filename, "wb");
+                
+#ifdef _OPENMP
+#pragma omp critical NZout
+#endif
+            {
+                unsigned int u_aux;
+                fwrite((void *) &Ll, sizeof(int), 1, NZ_paths_f);
+                fwrite((void *) &NQ, sizeof(int), 1, NZ_paths_f);
+                u_aux = (unsigned int)init_state;
+                fwrite((void *) &u_aux, sizeof(unsigned int), 1, NZ_paths_f);
+                u_aux = (unsigned int)final_state;
+                fwrite((void *) &u_aux, sizeof(unsigned int), 1, NZ_paths_f);
+                fwrite((void *) &aR, sizeof(float), 1, NZ_paths_f);
+                fwrite((void *) &aI, sizeof(float), 1, NZ_paths_f);
+                fwrite((void *) &X_magic, sizeof(float), 1, NZ_paths_f);
+                fwrite((void *) &total_paths, sizeof(double), 1, NZ_paths_f);
+                fwrite((void *) &path_NZ_counter, sizeof(path_NZ_counter), 1, NZ_paths_f);
+                
+                NZ_paths.file_save(NZ_paths_f);
+            }
+            
+#ifdef _OPENMP
+            // Close the file when all paths have written
+#pragma omp barrier
+#pragma omp single nowait
+#endif
+            {
+                fclose (NZ_paths_f);
+                fprintf (stderr, "Saved data on %llu NZ paths!\n", path_NZ_counter);
+            }
+        }
                  
     }// end omp parallel (NOTE: { included even if !NOT _OPENMP)
             
@@ -506,12 +572,10 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
     printf ("< %llu | U | %llu > = %.6f + i %.6f, p=%.6f\n", final_state, init_state, aR, aI, aR*aR+aI*aI);
     printf ("%llu paths, %llu non zero\n", path_counter, path_NZ_counter);
             
-    // Compute X_magic
-    float amplitude_modulo = complex_abs(aR, aI);
-    if (amplitude_modulo < __FLT_EPSILON__) {
+    // Output X_magic
+    if (X_magic < __FLT_EPSILON__) {
         printf ("0 amplitude, X magic not computed\n");
     } else {
-        X_magic = sum_abs_w_p / amplitude_modulo;
-        printf ("X magic = %.5f / %.5f = %.2f\n", sum_abs_w_p, amplitude_modulo, X_magic);
+        printf ("X magic = %.2f\n", X_magic);
     }
 }

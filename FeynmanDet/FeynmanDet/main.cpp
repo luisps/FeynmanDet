@@ -93,8 +93,8 @@ int main(int argc, char *argv[]) {
     const int L = circuit->size->num_layers;
     printf("L= %d \n", L);
     const int NQ = circuit->size->num_qubits;
-    if (NQ >21) {
-        fprintf (stderr, "ERROR: maximum 21 qubits allowed\n");
+    if (NQ >31) {
+        fprintf (stderr, "ERROR: maximum 31 qubits allowed\n");
         return 0;
     }
     
@@ -110,7 +110,9 @@ int main(int argc, char *argv[]) {
     StateT final_state= (StateT) fs_int;
     float aR=0;
     float aI=0;
-    
+    char NZ_fn[128];
+    snprintf(NZ_fn, 127, "NZ_paths_%s.data", argv[1]);
+
     switch (algorithm) {
         case 0:
             simulate_all_paths(circuit, init_state, final_state, aR, aI);
@@ -119,7 +121,7 @@ int main(int argc, char *argv[]) {
             simulate_RG_paths(circuit, init_state, final_state, aR, aI);
             break;
         case 2:
-            simulate_PB_paths(circuit, init_state, final_state, aR, aI);
+            simulate_PB_paths(circuit, init_state, final_state, aR, aI, NZ_fn);
             break;
         case 3:
             simulate_RG_paths_new_errors(circuit, init_state, final_state, aR, aI);
