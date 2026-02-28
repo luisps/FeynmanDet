@@ -9,6 +9,7 @@
 #include "colouring_RG.hpp"
 #include <time.h>
 #include <iostream>
+#include <cstdint>
 
 #include "simulator_all.hpp"
 

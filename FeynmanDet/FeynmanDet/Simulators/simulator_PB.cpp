@@ -8,6 +8,7 @@
 #include "layer.hpp"
 #include <time.h>
 #include <iostream>
+#include <cstdint>
 
 #include "colouring_RG.hpp"
 
