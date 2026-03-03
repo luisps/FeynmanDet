@@ -26,6 +26,7 @@ int main(int argc, char *argv[]) {
     
     char fileName[256];
     int algorithm = 1, fs_int=0;
+    double ComputingTime = 0.F;
     
     if (argc==1) {  // print usage
         fprintf (stderr, "Usage: ./FeynmanDet [circ] [final state] [alg] [n_threads]\n");
@@ -121,7 +122,7 @@ int main(int argc, char *argv[]) {
             simulate_RG_paths(circuit, init_state, final_state, aR, aI);
             break;
         case 2:
-            simulate_PB_paths(circuit, init_state, final_state, aR, aI, NZ_fn);
+            ComputingTime = simulate_PB_paths(circuit, init_state, final_state, aR, aI, NZ_fn);
             break;
         case 3:
             simulate_RG_paths_new_errors(circuit, init_state, final_state, aR, aI);
@@ -133,13 +134,16 @@ int main(int argc, char *argv[]) {
     
     auto end = std::chrono::high_resolution_clock::now();
     double time_taken=(double) (std::chrono::duration<double, std::milli>(end - start)).count();
-    printf("Time taken is: %.2lf mili secs\n", time_taken);
+    printf("Total time taken is: %.2lf mili secs\n", time_taken);
+    if (algorithm==2) { // PB
+        printf("Thread max computing time: %.2lf mili secs\n", ComputingTime);
+    }
     
     // Free the allocated memory
     free(circuit->size);
     free(circuit->layers);
     free(circuit);
     
-    printf("\n");
+    printf("That's all, folks\n");
     return 0;
 }

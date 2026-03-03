@@ -145,17 +145,18 @@ int validate_PB (StateT const state, StateT const prev_state, int const *const c
     return invalid;
 }
 
-void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI, char *NZ_paths_filename) {
+double simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state, float& aR, float& aI, char *NZ_paths_filename) {
 
     const int L = circuit->size->num_layers;
     const int NQ=circuit->size->num_qubits;
     const StateT N = 1 << NQ;
     StateT path_counter=0, path_NZ_counter=0;
+    double Thread_longest_time = 0.;
 
     if (L<4) { // 4 layers are required
         fprintf (stderr, "The circuit has %d layers: 4 is the minimum!\n", L);
         fflush(stderr);
-        return ;
+        return 0.F;
     }
     
     double const total_paths = pow(2.F, (double)(NQ*(L-1)));
@@ -190,7 +191,7 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
         if(colours[s]==INVALID){
             printf ("EARLY TERMINATION: < %llu | U | %llu > = %.6f + i %.6f\n", (unsigned long long)final_state,
                 (unsigned long long)init_state, aR, aI);
-            return;
+            return 0.F;
         }
     }
 
@@ -506,7 +507,12 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
 #if defined(_OPENMP)
         end=omp_get_wtime();
         double time_taken=double(end - start)*1000.F;
-        printf ("Thread %d: %llu evaluated paths, %llu non zero (%.2lf mili secs), n_tasks=%d\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, time_taken, n_tasks);
+#pragma omp critical (TaskTime)
+        {
+            if (time_taken > Thread_longest_time)
+                Thread_longest_time = time_taken;
+        }
+        fprintf (stderr, "Thread %d: %llu evaluated paths, %llu non zero (%.2lf mili secs), n_tasks=%d\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, time_taken, n_tasks);
 
 #pragma omp barrier
                  
@@ -579,4 +585,5 @@ void simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_state
     } else {
         printf ("X magic = %.2f\n", X_magic);
     }
+    return Thread_longest_time;
 }
