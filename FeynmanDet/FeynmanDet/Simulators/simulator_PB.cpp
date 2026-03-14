@@ -295,7 +295,9 @@ double simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_sta
 #endif
 
         // Object to contain the NZ paths data
+#if defined(__STORE_NZ_PATHS)
         FlatStorage NZ_paths(L-1);
+#endif
         StateT path_counterL=0, path_NZ_counterL=0;
         // thread local to compute X_magic
         float sum_abs_w_p_L = 0.f;
@@ -418,8 +420,10 @@ double simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_sta
                     sumI += pathI;
                     path_NZ_counterL++;
                     
+#if defined(__STORE_NZ_PATHS)
                     // store states of NZ path
                     NZ_paths.push_back(ndxs, pathR, pathI);
+#endif
                     
                     // thread local to compute X_magic
                     sum_abs_w_p_L += complex_abs(pathR, pathI);
@@ -531,6 +535,7 @@ double simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_sta
         }
 
             
+#if defined(__STORE_NZ_PATHS)
         // output NZ_paths
         if (NZ_paths_filename) { // only if given
             int const Ll = L-1;
@@ -572,6 +577,7 @@ double simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_sta
                 fprintf (stderr, "Saved data on %llu NZ paths!\n", path_NZ_counter);
             }
         }
+#endif
                  
     }// end omp parallel (NOTE: { included even if !NOT _OPENMP)
             
