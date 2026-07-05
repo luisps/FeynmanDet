@@ -613,6 +613,6 @@ double simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_sta
     // Output X_magic
     printf ("X magic = %.2f\n", X_magic);
     // Output N_eff
-    printf ("N_eff magic = %.2f\n", N_eff);
+    printf ("N_eff = %.2f\n", N_eff);
     return Thread_longest_time;
 }
