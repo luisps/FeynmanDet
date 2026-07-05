@@ -268,7 +268,17 @@ double simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_sta
      *  are phase-aligned, the sign problem would vanish.
      *
      */
-    float X_magic, sum_abs_w_p = 0.f;
+    float X_magic=0.f, sum_abs_w_p = 0.f;
+    
+    /*
+     *  We also calculate Neff - number of effective paths
+     *
+     *  Neff​= sum_p​(∣w_p​∣**2) / (sum_p​∣w_p​∣)**2​,
+     *
+     *  which captures the concentration of path weights.
+     */
+    float N_eff=0.f, sum_abs_w_p_2 = 0.f;
+
     
     // Simulation starts
     // omp parallel block
@@ -301,7 +311,9 @@ double simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_sta
         StateT path_counterL=0, path_NZ_counterL=0;
         // thread local to compute X_magic
         float sum_abs_w_p_L = 0.f;
-    
+        // thread local to compute N_eff
+        float sum_abs_w_p_2_L = 0.f;
+
         float sumR=0.f, sumI=0.f;
         // explicitly include up to 2 for loops
         // for parallel execution by OpenMP
@@ -332,207 +344,220 @@ double simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_sta
         for (StateT t = 0 ; t < N ; t++) {
             ndxs0 = (StateT) (a * t + b) & maskN;
 #else
-        for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
+            for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
 #endif
 #else   // _OPENMP
-        for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
+                for (ndxs0 = 0 ; ndxs0 < N ; ndxs0++) {
 #endif  // _OPENMP
-                        
+                    
 #if defined(_OPENMP)
-            n_tasks++;
+                    n_tasks++;
 #endif
-            // We have to validate whether ndxs0  is a valid state
-            // given the colouring
-            if(validate_PB (ndxs0, init_state, &colours[0], NQ) != -1) {
-                continue;  //  next t
-            }
-                        
-            // all intermediate layers indexes to 0
-            // except intermediate layer 0
-            // this one iterates as a for loop, to facilitate OpenMP
-            StateT ndxs[L-1];
-            // we make ndxs[0] equal to ndxs0
-            // only to avoid conditionals below
-            // this is only for reading
-            // all writes must be made to ndxs0
-            ndxs[0] = ndxs0;
-            
-            for (int i=1 ; i<L-1 ; i++) ndxs[i]=0 ;
-                        
-            float wR[L], wI[L];
-                        
-            float pathR = 1.f;
-            float pathI = 0.f;
-            float lR=1.f;
-            float lI=0.f;
-                        
-            // early termination if the amplitude
-            // from init_state to ndxs[0] is zero
-            TCircuitLayer *layer = &circuit->layers[0];
-            layer_w(layer, 0, init_state, ndxs0, lR, lI);
-                        
-            // Get this very carefully
-            // only proceed with this iteration
-            // which in fact is a pair (ndxs0,ndxs1)
-            // if the amplitude wasn't zero
-            if (complex_abs_square(lR, lI) <= 0.f) {
-                continue;   // skip to next t
-            }
-                        
-            wR[0]=pathR = lR;
-            wI[0]=pathI = lI;
-                        
-            int start_layer=1;
-                        
-            // main simulation loop
-            while (ndxs[1] < N) {
-                            
-                pathR = (start_layer==0? 1.f : wR[start_layer-1]);
-                pathI = (start_layer==0? 0.f : wI[start_layer-1]);
-                StateT current_state = (start_layer==0? init_state : ndxs[start_layer-1]);
-                            
-                int l;
-                StateT next_state;
-                bool zero_weight_layer=false;
-                            
-                // iterate over layers
-                for (l=start_layer ; l<L ; l++) {
-                    lR=1.f; lI=0.f;
-                    next_state = (l< L-1 ? ndxs[l] : final_state);
-                                
-                    TCircuitLayer *layer = &circuit->layers[l];
-                    layer_w(layer, l, current_state, next_state, lR, lI);
-                    complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
-                                
-                    wR[l]=pathR;
-                    wI[l]=pathI;
+                    // We have to validate whether ndxs0  is a valid state
+                    // given the colouring
+                    if(validate_PB (ndxs0, init_state, &colours[0], NQ) != -1) {
+                        continue;  //  next t
+                    }
+                    
+                    // all intermediate layers indexes to 0
+                    // except intermediate layer 0
+                    // this one iterates as a for loop, to facilitate OpenMP
+                    StateT ndxs[L-1];
+                    // we make ndxs[0] equal to ndxs0
+                    // only to avoid conditionals below
+                    // this is only for reading
+                    // all writes must be made to ndxs0
+                    ndxs[0] = ndxs0;
+                    
+                    for (int i=1 ; i<L-1 ; i++) ndxs[i]=0 ;
+                    
+                    float wR[L], wI[L];
+                    
+                    float pathR = 1.f;
+                    float pathI = 0.f;
+                    float lR=1.f;
+                    float lI=0.f;
+                    
+                    // early termination if the amplitude
+                    // from init_state to ndxs[0] is zero
+                    TCircuitLayer *layer = &circuit->layers[0];
+                    layer_w(layer, 0, init_state, ndxs0, lR, lI);
+                    
+                    // Get this very carefully
+                    // only proceed with this iteration
+                    // which in fact is a pair (ndxs0,ndxs1)
+                    // if the amplitude wasn't zero
                     if (complex_abs_square(lR, lI) <= 0.f) {
-                        zero_weight_layer=true;
-                        pathR = pathI = 0.f;
-                        break;
+                        continue;   // skip to next t
                     }
-                    current_state = next_state;
-                                
-                } // end iterating layers
-                            
-                if  (!zero_weight_layer) {
-                    sumR += pathR;
-                    sumI += pathI;
-                    path_NZ_counterL++;
                     
+                    wR[0]=pathR = lR;
+                    wI[0]=pathI = lI;
+                    
+                    int start_layer=1;
+                    
+                    // main simulation loop
+                    while (ndxs[1] < N) {
+                        
+                        pathR = (start_layer==0? 1.f : wR[start_layer-1]);
+                        pathI = (start_layer==0? 0.f : wI[start_layer-1]);
+                        StateT current_state = (start_layer==0? init_state : ndxs[start_layer-1]);
+                        
+                        int l;
+                        StateT next_state;
+                        bool zero_weight_layer=false;
+                        
+                        // iterate over layers
+                        for (l=start_layer ; l<L ; l++) {
+                            lR=1.f; lI=0.f;
+                            next_state = (l< L-1 ? ndxs[l] : final_state);
+                            
+                            TCircuitLayer *layer = &circuit->layers[l];
+                            layer_w(layer, l, current_state, next_state, lR, lI);
+                            complex_multiply(pathR, pathI, lR, lI, pathR, pathI);
+                            
+                            wR[l]=pathR;
+                            wI[l]=pathI;
+                            if (complex_abs_square(lR, lI) <= 0.f) {
+                                zero_weight_layer=true;
+                                pathR = pathI = 0.f;
+                                break;
+                            }
+                            current_state = next_state;
+                            
+                        } // end iterating layers
+                        
+                        if  (!zero_weight_layer) {
+                            sumR += pathR;
+                            sumI += pathI;
+                            path_NZ_counterL++;
+                            
 #if defined(__STORE_NZ_PATHS)
-                    // store states of NZ path
-                    NZ_paths.push_back(ndxs, pathR, pathI);
+                            // store states of NZ path
+                            NZ_paths.push_back(ndxs, pathR, pathI);
 #endif
-                    
-                    // thread local to compute X_magic
-                    sum_abs_w_p_L += complex_abs(pathR, pathI);
-                                
-                    // DEBUG
-                    /*printf ("Non zero path: ");
-                    for (int lll=0 ; lll<L-1 ; lll++) {
-                        printf ("%llu ", ndxs[lll]);
-                    }
-                    printf ("= %e + i %e\n", pathR, pathI);*/
-                                
-                }
-                path_counterL++;
                             
-                // compute next path
-                // if l==0 (0 amplitude in the first layer)
-                // break off from the while loop
-                // (to iterate over t)
-                if (l==0) break;
+                            // thread local to compute X_magic
+                            float abs_w_p_L = complex_abs(pathR, pathI);
+                            sum_abs_w_p_L += abs_w_p_L;
+                            sum_abs_w_p_2_L += (abs_w_p_L * abs_w_p_L);
                             
-                // updating ndxs[1..L-2]
-                // compute next path skipping invalid GREENs
+                            // DEBUG
+                            /*printf ("Non zero path: ");
+                             for (int lll=0 ; lll<L-1 ; lll++) {
+                             printf ("%llu ", ndxs[lll]);
+                             }
+                             printf ("= %e + i %e\n", pathR, pathI);*/
                             
-                // compute next path skipping invalid GREENs and fixed BLUEs
-                int ll;
-                int invalid_state_qb = 0;  // -1 means valid
-                for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=1 && invalid_state_qb != -1 ; ll--) {
-                                
-                    //printf ("change ndxs[%d]=%llu\n", ll, ndxs[ll]);
-                    // get the state from the previous layer. Will need it
-                    StateT const prev_state = (ll==0 ? init_state : ndxs[ll-1]);
-                                
-                    invalid_state_qb = 0;   // -1 is valid
-                    while(invalid_state_qb != -1) {
-                        ndxs[ll]++;
-                        //if (ll==0)  fprintf (stderr, "ndxs[0] = %llu \n", ndxs[0]);
-                                    
-                        if (ndxs[ll]==N && ll>1)  { // this layer overflows
-                            ndxs[ll] = 0;
-                            break;        // break only from inner loop
                         }
-                        else if (ndxs[1]==N && ll==1)  { // back to for loops
-                            invalid_state_qb = -1; // terminate outer loop
-                            break;   // terminate inner loop
-                        }
-                        start_layer=ll;
-                        //printf ("changed ndxs[%d]=%llu (ndxs[0] = %llu) \n", ll, ndxs[ll], ndxs[0]);
-                                    
-                        // verify whether this ndxs complies with the colouring
-                        invalid_state_qb = validate_PB(ndxs[ll], prev_state, &colours[ll*NQ], NQ);
-                        if (invalid_state_qb != -1) { // need to know invalid bit index
-                            ndxs[ll] |= ((1 << invalid_state_qb)- 1) ; // skip all  intermediate non valid states
-                        }
-                                    
-                    }  // while (invalid_state_green)
-                    //printf ("END FOR LOOP ndxs[%d]=%llu\n", ll, ndxs[ll]);
-                }    // for backward change layers ndxs
+                        path_counterL++;
+                        
+                        // compute next path
+                        // if l==0 (0 amplitude in the first layer)
+                        // break off from the while loop
+                        // (to iterate over t)
+                        if (l==0) break;
+                        
+                        // updating ndxs[1..L-2]
+                        // compute next path skipping invalid GREENs
+                        
+                        // compute next path skipping invalid GREENs and fixed BLUEs
+                        int ll;
+                        int invalid_state_qb = 0;  // -1 means valid
+                        for (ll=((zero_weight_layer && l<(L-1))? l : L-2); ll>=1 && invalid_state_qb != -1 ; ll--) {
                             
-            } // main simulation loop (while)
-        }  // main simulation loop (t and omp for)
+                            //printf ("change ndxs[%d]=%llu\n", ll, ndxs[ll]);
+                            // get the state from the previous layer. Will need it
+                            StateT const prev_state = (ll==0 ? init_state : ndxs[ll-1]);
+                            
+                            invalid_state_qb = 0;   // -1 is valid
+                            while(invalid_state_qb != -1) {
+                                ndxs[ll]++;
+                                //if (ll==0)  fprintf (stderr, "ndxs[0] = %llu \n", ndxs[0]);
+                                
+                                if (ndxs[ll]==N && ll>1)  { // this layer overflows
+                                    ndxs[ll] = 0;
+                                    break;        // break only from inner loop
+                                }
+                                else if (ndxs[1]==N && ll==1)  { // back to for loops
+                                    invalid_state_qb = -1; // terminate outer loop
+                                    break;   // terminate inner loop
+                                }
+                                start_layer=ll;
+                                //printf ("changed ndxs[%d]=%llu (ndxs[0] = %llu) \n", ll, ndxs[ll], ndxs[0]);
+                                
+                                // verify whether this ndxs complies with the colouring
+                                invalid_state_qb = validate_PB(ndxs[ll], prev_state, &colours[ll*NQ], NQ);
+                                if (invalid_state_qb != -1) { // need to know invalid bit index
+                                    ndxs[ll] |= ((1 << invalid_state_qb)- 1) ; // skip all  intermediate non valid states
+                                }
+                                
+                            }  // while (invalid_state_green)
+                            //printf ("END FOR LOOP ndxs[%d]=%llu\n", ll, ndxs[ll]);
+                        }    // for backward change layers ndxs
+                        
+                    } // main simulation loop (while)
+                }  // main simulation loop (t and omp for)
 #if defined(_OPENMP)
 #pragma omp atomic
 #endif
-        aR += sumR;
+                aR += sumR;
 #if defined(_OPENMP)
 #pragma omp atomic
 #endif
-        aI += sumI;
+                aI += sumI;
 #if defined(_OPENMP)
 #pragma omp atomic
 #endif
-        path_counter += path_counterL;
+                path_counter += path_counterL;
 #if defined(_OPENMP)
 #pragma omp atomic
 #endif
-        path_NZ_counter += path_NZ_counterL;
-
-        // accumulate sum_abs_w_p_L to compute X_magic
+                path_NZ_counter += path_NZ_counterL;
+                
+                // accumulate sum_abs_w_p_L to compute X_magic
 #if defined(_OPENMP)
 #pragma omp atomic
 #endif
-        sum_abs_w_p += sum_abs_w_p_L;
-
-        
+                sum_abs_w_p += sum_abs_w_p_L;
+                
+                // accumulate sum_abs_w_p_2_L to compute N_eff
 #if defined(_OPENMP)
-        end=omp_get_wtime();
-        double time_taken=double(end - start)*1000.F;
+#pragma omp atomic
+#endif
+                sum_abs_w_p_2 += sum_abs_w_p_2_L;
+                
+#if defined(_OPENMP)
+                end=omp_get_wtime();
+                double time_taken=double(end - start)*1000.F;
 #pragma omp critical (TaskTime)
-        {
-            if (time_taken > Thread_longest_time)
-                Thread_longest_time = time_taken;
-        }
-        fprintf (stderr, "Thread %d: %llu evaluated paths, %llu non zero (%.2lf mili secs), n_tasks=%d\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, time_taken, n_tasks);
-
+                {
+                    if (time_taken > Thread_longest_time)
+                        Thread_longest_time = time_taken;
+                }
+                fprintf (stderr, "Thread %d: %llu evaluated paths, %llu non zero (%.2lf mili secs), n_tasks=%d\n", omp_get_thread_num(), path_counterL, path_NZ_counterL, time_taken, n_tasks);
+                
 #pragma omp barrier
-                 
+                
 #endif
-        // Compute X_magic
-        float amplitude_modulo = complex_abs(aR, aI);
+                // Compute X_magic and N_eff
+                float amplitude_modulo = complex_abs(aR, aI);
+                float sum_2_abs_w_p = sum_abs_w_p * sum_abs_w_p;
 #if defined(_OPENMP)
 #pragma omp single nowait
 #endif
-        {
-            if (amplitude_modulo < __FLT_EPSILON__) {
-                X_magic = 0.f;
-            } else {
-                X_magic = sum_abs_w_p / amplitude_modulo;
-            }
-        }
+                {
+                    if (sum_abs_w_p_2 < __FLT_EPSILON__) {
+                        N_eff = 0.f;
+                    } else {
+                        N_eff = sum_2_abs_w_p / sum_abs_w_p_2;
+                    }
+                    if (amplitude_modulo < __FLT_EPSILON__) {
+                        X_magic = 0.f;
+                    } else {
+                        X_magic = sum_abs_w_p / amplitude_modulo;
+                    }
+                }
 
             
 #if defined(__STORE_NZ_PATHS)
@@ -586,10 +611,8 @@ double simulate_PB_paths (TCircuit *circuit, StateT init_state, StateT final_sta
     printf ("%llu paths, %llu non zero\n", path_counter, path_NZ_counter);
             
     // Output X_magic
-    if (X_magic < __FLT_EPSILON__) {
-        printf ("0 amplitude, X magic not computed\n");
-    } else {
-        printf ("X magic = %.2f\n", X_magic);
-    }
+    printf ("X magic = %.2f\n", X_magic);
+    // Output N_eff
+    printf ("N_eff magic = %.2f\n", N_eff);
     return Thread_longest_time;
 }
